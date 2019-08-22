@@ -13,14 +13,13 @@
 
 template< class T , std::size_t N >
 class Vector {
-
 private:
 	std::array<T,N> x ;
 	
 public:
 	// access elements
 	T   operator[]( const std::size_t & ) const ; // const, cannot change indexed object
-	T & operator[]( const std::size_t & ) ; // non-const, can change indexed object
+	T & operator[]( const std::size_t & ) ;       // non-const, can change indexed object
 	
 	// scalar assignment
 	Vector<T,N> & operator= ( const T & ) ;

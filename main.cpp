@@ -36,11 +36,5 @@ int main( int argc , const char * argv[] ) {
 	spring_network->execute_jobs() ;
 	
 	std::cout << "Complete" << std::endl ;
-	
-	// read all parameters in high-memory mode
-	// afterwards use if(lowmem/highmem)
-	//     typecast to lower memory if option specified.
-	//     then call solver of the right datatype <type>
-	
     return 0 ;
 }

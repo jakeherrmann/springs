@@ -59,7 +59,6 @@ public:
 ///
 class ASpringNetwork {
 public:
-	//virtual ~ASpringNetwork() ;
 	virtual void setup( const NetworkParameters & , const char * , const char * ) = 0 ;
 	virtual void execute_jobs( void ) = 0 ;
 	static std::unique_ptr<ASpringNetwork> create_spring_network_obj( const NetworkParameters & ) ;
