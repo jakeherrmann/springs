@@ -6,20 +6,37 @@
 //  Copyright © 2019 Jacob Herrmann. All rights reserved.
 //
 
+#include <cstdlib>
+#include <cstdio>
 #include <iostream>
 #include <string>
 #include <memory>
+
+#ifdef WINDOWS
+	#include <direct.h>
+	#define get_current_dir _getcwd
+#else
+	#include <unistd.h>
+	#define get_current_dir getcwd
+#endif
 
 #include "springs.hpp"
 
 int main( int argc , const char * argv[] ) {
 	
-	std::string file_parameters    = "/Users/jake/Documents/GitHub/springNet/springs/springs/INPUT/network_parameters.txt" ;
-	std::string file_setup_nodes   = "/Users/jake/Documents/GitHub/springNet/springs/springs/INPUT/network_setup_nodes.dat" ;
-	std::string file_setup_springs = "/Users/jake/Documents/GitHub/springNet/springs/springs/INPUT/network_setup_springs.dat" ;
+	char cwd [FILENAME_MAX] ;
+	if( get_current_dir(cwd,sizeof(cwd)) == NULL ) {
+		std::cout << "COULD NOT GET CURRENT DIRECTORY" << std::endl ;
+	} else {
+		std::cout << "WORKING DIRECTORY:\n" << cwd << std::endl ;
+	}
+	
+	std::string dir_input  = "./INPUT/" ;
+	std::string dir_output = "./OUTPUT/" ;
+	std::system( ("mkdir " + dir_output).c_str() ) ;
 	
 	std::cout << "\n0.  Parameters" << std::endl ;
-	NetworkParameters network_parameters( file_parameters.c_str() ) ;
+	NetworkParameters network_parameters( dir_input , dir_output ) ;
 	
 	std::cout << "\n1.  Create Spring Network" << std::endl ;
 	std::unique_ptr<ASpringNetwork> spring_network = ASpringNetwork::create_spring_network_obj( network_parameters ) ;
@@ -28,13 +45,11 @@ int main( int argc , const char * argv[] ) {
 	}
 	
 	std::cout << "\n2.  Setup" << std::endl ;
-	spring_network->setup( network_parameters ,
-						   file_setup_nodes.c_str() ,
-						   file_setup_springs.c_str() ) ;
+	spring_network->setup( network_parameters ) ;
 	
-	std::cout << "\n3.  Execute Jobs" << std::endl ;
-	spring_network->execute_jobs() ;
+	std::cout << "\n3.  Solve" << std::endl ;
+	spring_network->solve() ;
 	
-	std::cout << "Complete" << std::endl ;
+	std::cout << "\n    Complete" << std::endl ;
     return 0 ;
 }

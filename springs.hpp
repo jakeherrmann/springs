@@ -21,11 +21,19 @@
 ///
 class NetworkParameters {
 public:
+	//
+	std::string dir_input ;
+	std::string dir_output ;
+	std::string file_input_parameters ;
+	//
 	std::size_t num_points ;
 	std::size_t num_springs ;
 	std::string precision = "double" ;
 	std::size_t num_dimensions = 2 ;
-	NetworkParameters( const char * ) ;
+	std::size_t num_stiffness_tension ;
+	std::size_t num_stiffness_compression ;
+	//
+	NetworkParameters( const std::string & , const std::string & ) ;
 	void load_parameters( const char * ) ;
 	void save_parameters( const char * ) ;
 } ;
@@ -44,9 +52,13 @@ public:
 template< class T , std::size_t N >
 class Spring {
 public:
+	static std::size_t num_stiffness_tension ;
+	static std::size_t num_stiffness_compression ;
+public:
 	Point<T,N> * start ;
 	Point<T,N> * end ;
-	T stiffness ;
+	std::vector<T> stiffness_tension ;
+	std::vector<T> stiffness_compression ;
 	T length ;
 	T rest_length ;
 	Vector<T,N> force ;
@@ -59,8 +71,8 @@ public:
 ///
 class ASpringNetwork {
 public:
-	virtual void setup( const NetworkParameters & , const char * , const char * ) = 0 ;
-	virtual void execute_jobs( void ) = 0 ;
+	virtual void setup( const NetworkParameters & ) = 0 ;
+	virtual void solve( void ) = 0 ;
 	static std::unique_ptr<ASpringNetwork> create_spring_network_obj( const NetworkParameters & ) ;
 } ;
 
@@ -83,6 +95,15 @@ class SpringNetwork : public ASpringNetwork {
 	typedef typename std::vector<        Link >::iterator iterLink ;
 	typedef typename std::vector<        Node >::iterator iterNode ;
 private:
+	//
+	std::string dir_input ;
+	std::string dir_output ;
+	std::string file_input_parameters ;
+	std::string file_input_nodes ;
+	std::string file_input_springs ;
+	std::string file_output_nodes ;
+	std::string file_output_springs ;
+	//
 	std::size_t num_points ;
 	std::size_t num_springs ;
 	std::vector<  Point<T,N> > points ;
@@ -95,23 +116,22 @@ private:
 	std::uniform_real_distribution<T> uni_0_1 ;
 	std::uniform_real_distribution<T> uni_1_1 ;
 	T max_spring_length ;
-	T small_number = static_cast<T>(0.001) ;
 public:
 	//
 	T total_energy( void ) ;
-	void move_points_force( void ) ;
+	void move_points_force( const T & ) ;
 	void move_points_rand( const T & ) ;
 	bool test_reboot( void ) ;
 	bool accept_new_points( const T & , const T & ) ;
 	void find_max_spring_length( void ) ;
 	T heat_up( const T & , const T & ) ;
-	void execute_jobs( void ) ;
+	void solve( void ) ;
 	void apply_loads( void ) ;
 	void anneal( void ) ;
 	void save_output( void ) ;
 	void stretch( const Vector<T,N> & ) ;
 	// input & output
-	void setup( const NetworkParameters & , const char * , const char * ) ;
+	void setup( const NetworkParameters & ) ;
 	void load_network_binary( const char * , const char * ) ;
 	void save_network_binary( const char * , const char * ) ;
 	void construct_network( void ) ;

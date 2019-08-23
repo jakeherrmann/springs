@@ -26,9 +26,13 @@
 ///////////////////// NETWORK PARAMETERS ///////////////////
 ////////////////////////////////////////////////////////////
 
-NetworkParameters::NetworkParameters( const char * file_name )
+NetworkParameters::NetworkParameters( const std::string & dir_input ,
+									  const std::string & dir_output )
 {
-	load_parameters( file_name ) ;
+	this->dir_input       = dir_input ;
+	this->dir_output      = dir_output ;
+	file_input_parameters = dir_input + "network_parameters.txt" ;
+	load_parameters( file_input_parameters.c_str() ) ;
 	return ;
 }
 
@@ -44,7 +48,9 @@ void NetworkParameters::load_parameters( const char * file_name )
 			file >> num_points
 				 >> num_springs
 				 >> precision
-				 >> num_dimensions ;
+				 >> num_dimensions
+				 >> num_stiffness_tension
+				 >> num_stiffness_compression ;
 			file.close() ;
 		}
 	}
@@ -76,22 +82,39 @@ T Spring<T,N>::spring_energy( void )
 	delta_position -= start->position ;
 	length = delta_position.norm() ;
 	T delta_length = length - rest_length ;
-	T force_magnitude ;
-	T energy ;
+	T force_magnitude = static_cast<T>(0) ;
+	T energy = static_cast<T>(0) ;
 	if( delta_length > 0 ) {
-		force_magnitude = stiffness * delta_length ;
-		energy = force_magnitude * delta_length * static_cast<T>(0.5) ;
+		T force_component ;
+		T delta_length_power_i = delta_length ;
+		for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_tension ; ++i ) {
+			force_component = stiffness_tension[i] * delta_length_power_i ;
+			force_magnitude += force_component ;
+			energy += force_component * delta_length / static_cast<T>(i+1) ;
+			delta_length_power_i *= delta_length ;
+		}
 	} else if( allow_compression ) {
-		force_magnitude = stiffness * delta_length ;
-		energy = force_magnitude * delta_length * static_cast<T>(0.5) ;
-	} else {
-		force_magnitude = static_cast<T>(0) ;
-		energy = static_cast<T>(0) ;
+		delta_length = std::fabs( delta_length ) ;
+		T force_component ;
+		T delta_length_power_i = delta_length ;
+		for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_compression ; ++i ) {
+			force_component = stiffness_compression[i] * delta_length_power_i ;
+			force_magnitude += force_component ;
+			energy += force_component * delta_length / static_cast<T>(i+1) ;
+			delta_length_power_i *= delta_length ;
+		}
+		force_magnitude = -force_magnitude ;
 	}
 	force = delta_position ;
 	force *= (force_magnitude/length) ;
 	return energy ;
 }
+
+/// DECLARE STATIC MEMBER VARIABLES ///
+template< class T , std::size_t N >
+std::size_t Spring<T,N>::num_stiffness_tension ;
+template< class T , std::size_t N >
+std::size_t Spring<T,N>::num_stiffness_compression ;
 
 ////////////////////////////////////////////////////////////
 ////////////////////// SPRING NETWORK //////////////////////
@@ -117,18 +140,24 @@ std::unique_ptr<ASpringNetwork> ASpringNetwork::create_spring_network_obj( const
 
 ///_______________________  setup _______________________///
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters ,
-								const char * file_nodes ,
-								const char * file_springs )
+void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters )
 {
+	dir_input           = network_parameters.dir_input ;
+	dir_output          = network_parameters.dir_output ;
+	file_input_nodes    = dir_input  + "network_setup_nodes.dat" ;
+	file_input_springs  = dir_input  + "network_setup_springs.dat" ;
+	file_output_nodes   = dir_output + "network_output_nodes.dat" ;
+	file_output_springs = dir_output + "network_output_springs.dat" ;
 	uni_0_1 = std::uniform_real_distribution<T>( 0.0,+1.0) ;
 	uni_1_1 = std::uniform_real_distribution<T>(-1.0,+1.0) ;
 	num_points  = network_parameters.num_points ;
 	num_springs = network_parameters.num_springs ;
+	Spring<T,N>::num_stiffness_tension = network_parameters.num_stiffness_tension ;
+	Spring<T,N>::num_stiffness_compression = network_parameters.num_stiffness_compression ;
 	points  = std::vector<  Point<T,N> >( num_points  ) ;
 	springs = std::vector< Spring<T,N> >( num_springs ) ;
 	nodes   = std::vector<        Node >( num_points  ) ;
-	load_network_binary( file_nodes , file_springs ) ;
+	load_network_binary( file_input_nodes.c_str() , file_input_springs.c_str() ) ;
 	construct_network() ;
 	return ;
 }
@@ -142,6 +171,9 @@ void SpringNetwork<T,N>::load_network_binary( const char * file_nodes ,
 	T             * read_data_T ;
 	std::uint32_t * read_data_uint32 ;
 	std::uint8_t  * read_data_uint8 ;
+	
+	std::size_t NKT = Spring<T,N>::num_stiffness_tension ;
+	std::size_t NKC = Spring<T,N>::num_stiffness_compression ;
 	
 	// points
 	if( file_nodes != NULL ) {
@@ -165,17 +197,18 @@ void SpringNetwork<T,N>::load_network_binary( const char * file_nodes ,
 	// springs
 	if( file_springs != NULL ) {
 		file_ptr = std::fopen( file_springs , "rb" ) ;
-		read_data_uint32 = new std::uint32_t [2] ;
-		read_data_T      = new T             [2] ;
-		read_data_uint8  = new std::uint8_t  [1] ;
+		read_data_uint32 = new std::uint32_t [2        ] ;
+		read_data_T      = new T             [1+NKT+NKC] ;
+		read_data_uint8  = new std::uint8_t  [1        ] ;
 		for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-			std::fread( read_data_uint32 , sizeof(std::uint32_t) , 2 , file_ptr ) ;
-			std::fread( read_data_T      , sizeof(T)             , 2 , file_ptr ) ;
-			std::fread( read_data_uint8  , sizeof(std::uint8_t)  , 1 , file_ptr ) ;
+			std::fread( read_data_uint32 , sizeof(std::uint32_t) , 2         , file_ptr ) ;
+			std::fread( read_data_T      , sizeof(T)             , 1+NKT+NKC , file_ptr ) ;
+			std::fread( read_data_uint8  , sizeof(std::uint8_t)  , 1         , file_ptr ) ;
 			s->start = &points[ read_data_uint32[0] ] ;
 			s->end   = &points[ read_data_uint32[1] ] ;
-			s->stiffness   = read_data_T[0] ;
-			s->rest_length = read_data_T[1] ;
+			s->rest_length = read_data_T[0] ;
+			s->stiffness_tension     = std::vector<T>( &read_data_T[1    ] , &read_data_T[1+NKT    ] ) ;
+			s->stiffness_compression = std::vector<T>( &read_data_T[1+NKT] , &read_data_T[1+NKT+NKC] ) ;
 			s->allow_compression = ( read_data_uint8[0] == 1 ) ;
 		}
 		delete [] read_data_uint32 ;
@@ -195,6 +228,9 @@ void SpringNetwork<T,N>::save_network_binary( const char * file_nodes ,
 	T             * write_data_T ;
 	std::uint32_t * write_data_uint32 ;
 	std::uint8_t  * write_data_uint8 ;
+	
+	std::size_t NKT = Spring<T,N>::num_stiffness_tension ;
+	std::size_t NKC = Spring<T,N>::num_stiffness_compression ;
 	
 	// points
 	if( file_nodes != NULL ) {
@@ -218,18 +254,19 @@ void SpringNetwork<T,N>::save_network_binary( const char * file_nodes ,
 	// springs
 	if( file_springs != NULL ) {
 		file_ptr = std::fopen( file_springs , "wb" ) ;
-		write_data_uint32 = new std::uint32_t [2] ;
-		write_data_T      = new T             [2] ;
-		write_data_uint8  = new std::uint8_t  [1] ;
+		write_data_uint32 = new std::uint32_t [2        ] ;
+		write_data_T      = new T             [1+NKT+NKC] ;
+		write_data_uint8  = new std::uint8_t  [1        ] ;
 		for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 			write_data_uint32[0] = static_cast<std::uint32_t>( s->start - &points[0] ) ;
 			write_data_uint32[1] = static_cast<std::uint32_t>( s->end   - &points[0] ) ;
-			write_data_T[0] = s->stiffness   ;
 			write_data_T[1] = s->rest_length ;
+			std::copy( s->stiffness_tension.begin()     , s->stiffness_tension.end()     , &write_data_T[1    ] ) ;
+			std::copy( s->stiffness_compression.begin() , s->stiffness_compression.end() , &write_data_T[1+NKT] ) ;
 			write_data_uint8[0] = static_cast<bool>( s->allow_compression ) ;
-			std::fwrite( write_data_uint32 , sizeof(std::uint32_t) , 2 , file_ptr ) ;
-			std::fwrite( write_data_T      , sizeof(T)             , 2 , file_ptr ) ;
-			std::fwrite( write_data_uint8  , sizeof(std::uint8_t)  , 1 , file_ptr ) ;
+			std::fwrite( write_data_uint32 , sizeof(std::uint32_t) , 2         , file_ptr ) ;
+			std::fwrite( write_data_T      , sizeof(T)             , 1+NKT+NKC , file_ptr ) ;
+			std::fwrite( write_data_uint8  , sizeof(std::uint8_t)  , 1         , file_ptr ) ;
 		}
 		delete [] write_data_uint32 ;
 		delete [] write_data_T      ;
@@ -325,7 +362,7 @@ T SpringNetwork<T,N>::total_energy( void )
 
 ///_________________  move_points_force _________________///
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::move_points_force( void )
+void SpringNetwork<T,N>::move_points_force( const T & small_number )
 {
 	iterNode n ;
 	iterNode n_end ;
@@ -411,9 +448,9 @@ T SpringNetwork<T,N>::heat_up( const T & amplitude , const T & num_config_test )
 	return energy_max ;
 }
 
-///____________________ execute_jobs ____________________///
+///_______________________  solve _______________________///
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::execute_jobs( void )
+void SpringNetwork<T,N>::solve( void )
 {
 	apply_loads() ;
 	anneal() ;
@@ -425,7 +462,6 @@ void SpringNetwork<T,N>::execute_jobs( void )
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::apply_loads( void )
 {
-	std::cout << "Executing Job 1:" << std::endl ;
 	Vector<T,N> relative_stretch ;
 	relative_stretch = static_cast<T>(0) ;
 	relative_stretch[0] = static_cast<T>(0.0) ;
@@ -438,9 +474,7 @@ void SpringNetwork<T,N>::apply_loads( void )
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::save_output( void )
 {
-	std::string file_nodes   = "/Users/jake/Documents/GitHub/springNet/springs/springs/OUTPUT/network_job1_nodes.dat" ;
-	std::string file_springs = "/Users/jake/Documents/GitHub/springNet/springs/springs/OUTPUT/network_job1_springs.dat" ;
-	save_network_binary( file_nodes.c_str() , file_springs.c_str() ) ;
+	save_network_binary( file_output_nodes.c_str() , file_output_springs.c_str() ) ;
 	return ;
 }
 
@@ -458,6 +492,8 @@ void SpringNetwork<T,N>::anneal( void )
 	T energy_best = energy ;
 	
 	// annealing solver parameters
+	// TODO // get these parameters from NetworkParameters (default/file)
+	T force_step_size = static_cast<T>(0.01) ;
 	T temperature_reduction = static_cast<T>(0.99) ;
 	T energy_compare ;
 	T energy_compare_min = static_cast<T>(1E-12) ;
@@ -494,7 +530,7 @@ void SpringNetwork<T,N>::anneal( void )
 		// if configuration is too extreme, reset network to best
 		// no need for random ordering if move_points_force() does not depend on order
 		///std::random_shuffle( nodes.begin() , nodes.end() ) ;
-		move_points_force() ;
+		move_points_force( force_step_size ) ;
 		energy = total_energy() ;
 		reboot = test_reboot() ;
 		if( reboot ) {
@@ -533,8 +569,8 @@ void SpringNetwork<T,N>::anneal( void )
 		
 		if( ((iter%100)==0) && (iter<=10000) ) {
 			save_network_binary(
-				("/Users/jake/Documents/GitHub/springNet/springs/springs/OUTPUT/iter"+std::to_string(iter)+"_nodes.dat").c_str() ,
-				("/Users/jake/Documents/GitHub/springNet/springs/springs/OUTPUT/iter"+std::to_string(iter)+"_springs.dat").c_str() ) ;
+				(dir_output+"iter_"+std::to_string(iter)+"_nodes.dat").c_str() ,
+				(dir_output+"iter_"+std::to_string(iter)+"_springs.dat").c_str() ) ;
 		}
 		
 		// accept or reject new state based on change in energy
