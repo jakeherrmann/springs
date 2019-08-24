@@ -26,12 +26,12 @@ public:
 	std::string dir_output ;
 	std::string file_input_parameters ;
 	//
-	std::size_t num_points ;
-	std::size_t num_springs ;
+	std::size_t num_points  = 0 ;
+	std::size_t num_springs = 0 ;
 	std::string precision = "double" ;
 	std::size_t num_dimensions = 2 ;
-	std::size_t num_stiffness_tension ;
-	std::size_t num_stiffness_compression ;
+	std::size_t num_stiffness_tension     = 0 ;
+	std::size_t num_stiffness_compression = 0 ;
 	//
 	NetworkParameters( const std::string & , const std::string & ) ;
 	void load_parameters( const char * ) ;
@@ -45,7 +45,6 @@ public:
 	Vector<T,N> position ;
 	Vector<T,N> force_applied ;
 	bool fixed ;
-	T net_force_magnitude = static_cast<T>(0) ;
 } ;
 
 ///
@@ -88,6 +87,8 @@ class SpringNetwork : public ASpringNetwork {
 	struct Node {
 		Point<T,N> * point ;
 		std::vector< Link > links ;
+		Vector<T,N> net_force ;
+		T net_force_magnitude = static_cast<T>(0) ;
 	} ;
 	// iterator types
 	typedef typename std::vector<  Point<T,N> >::iterator iterPoint ;
@@ -126,10 +127,8 @@ public:
 	void find_max_spring_length( void ) ;
 	T heat_up( const T & , const T & ) ;
 	void solve( void ) ;
-	void apply_loads( void ) ;
 	void anneal( void ) ;
 	void save_output( void ) ;
-	void stretch( const Vector<T,N> & ) ;
 	// input & output
 	void setup( const NetworkParameters & ) ;
 	void load_network_binary( const char * , const char * ) ;

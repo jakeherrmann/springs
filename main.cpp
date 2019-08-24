@@ -50,6 +50,6 @@ int main( int argc , const char * argv[] ) {
 	std::cout << "\n3.  Solve" << std::endl ;
 	spring_network->solve() ;
 	
-	std::cout << "\n    Complete" << std::endl ;
+	std::cout << "\n4.  Complete" << std::endl ;
     return 0 ;
 }

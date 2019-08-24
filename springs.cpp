@@ -295,17 +295,6 @@ void SpringNetwork<T,N>::construct_network( void )
 	return ;
 }
 
-///______________________  stretch ______________________///
-template< class T , std::size_t N >
-void SpringNetwork<T,N>::stretch( const Vector<T,N> & macro_strain )
-{
-	const Vector<T,N> relative_position = macro_strain + static_cast<T>(1) ;
-	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
-		p->position *= relative_position ;
-	}
-	return ;
-}
-
 ///_______________ find_max_spring_length _______________///
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::find_max_spring_length( void )
@@ -346,48 +335,47 @@ T SpringNetwork<T,N>::total_energy( void )
 	}
 	
 	// account for force imbalances, "potential energy"
-	T average_spring_length = static_cast<T>(0) ;
+	// combine external applied force & internal spring forces
+	iterNode n ;
+	iterNode n_end ;
+	iterLink l ;
+	iterLink l_end ;
+	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
+		n->net_force = n->point->force_applied ;
+		for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
+			if( l->spring_direction > static_cast<T>(0) ) {
+				n->net_force += l->spring->get_force() ;
+			} else {
+				n->net_force -= l->spring->get_force() ;
+			}
+		}
+		n->net_force_magnitude = n->net_force.norm() ;
+	}
+	T sum_spring_length = static_cast<T>(0) ;
 	T sum_net_force_magnitude = static_cast<T>(0) ;
 	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-		average_spring_length += s->length ;
+		sum_spring_length += s->length ;
 	}
-	average_spring_length /= static_cast<T>(num_springs) ;
-	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
-		sum_net_force_magnitude += p->net_force_magnitude ;
+	for( iterNode n = nodes.begin() ; n != nodes.end() ; ++n ) {
+		sum_net_force_magnitude += n->net_force_magnitude ;
 	}
-	energy += ( sum_net_force_magnitude * average_spring_length ) ;
+	energy += ( sum_net_force_magnitude * sum_spring_length ) ;
 	
 	return energy ;
 }
 
 ///_________________  move_points_force _________________///
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::move_points_force( const T & small_number )
+void SpringNetwork<T,N>::move_points_force( const T & force_step_size )
 {
 	iterNode n ;
 	iterNode n_end ;
-	iterLink l ;
-	iterLink l_end ;
-	Vector<T,N> net_force ;
+	// apply net force & move small displacement towards equilibrating position
+	Vector<T,N> small_displacement ;
 	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
-		net_force = n->point->force_applied ;
-		//*
-		for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
-			if( l->spring_direction > static_cast<T>(0) ) {
-				net_force += l->spring->get_force() ;
-			} else {
-				net_force -= l->spring->get_force() ;
-			}
-		}
-		//*/
-		/*
-		for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
-			net_force += l->spring->get_force() * l->spring_direction ;
-		}
-		//*/
-		net_force *= small_number ;
-		n->point->position += net_force ;
-		n->point->net_force_magnitude = net_force.norm() ;
+		small_displacement = n->net_force ;
+		small_displacement *= force_step_size ;
+		n->point->position += small_displacement ;
 	}
 	return ;
 }
@@ -452,21 +440,8 @@ T SpringNetwork<T,N>::heat_up( const T & amplitude , const T & num_config_test )
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::solve( void )
 {
-	apply_loads() ;
 	anneal() ;
 	save_output() ;
-	return ;
-}
-
-///____________________  apply_loads ____________________///
-template< class T , std::size_t N >
-void SpringNetwork<T,N>::apply_loads( void )
-{
-	Vector<T,N> relative_stretch ;
-	relative_stretch = static_cast<T>(0) ;
-	relative_stretch[0] = static_cast<T>(0.0) ;
-	stretch( relative_stretch ) ;
-	find_max_spring_length() ;
 	return ;
 }
 
@@ -499,15 +474,16 @@ void SpringNetwork<T,N>::anneal( void )
 	T energy_compare_min = static_cast<T>(1E-12) ;
 	T relative_change_energy ;
 	T relative_change_energy_tol = static_cast<T>(1E-6) ;
-	std::size_t num_iter_max = 500000 ;
-	std::size_t num_iter_heatup = num_iter_max / 5 ;
+	std::size_t num_iter_max       = 500000 ;
+	std::size_t num_iter_heatup    = num_iter_max /   5 ;
 	std::size_t num_iter_01percent = num_iter_max / 100 ;
 	std::size_t num_iter_10percent = num_iter_max /  10 ;
-	std::size_t num_small_change = 0 ;
+	std::size_t num_small_change     =  0 ;
 	std::size_t num_small_change_max = 20 ;
-	std::size_t num_temperature_reductions = 0 ;
+	std::size_t num_temperature_reductions     =    0 ;
 	std::size_t num_temperature_reductions_max = 1000 ;
 	bool reboot ;
+	find_max_spring_length() ;
 	
 	// choose starting temperature
 	// equivalent to 1/e probability to accept energy difference
@@ -520,9 +496,13 @@ void SpringNetwork<T,N>::anneal( void )
 	// begin annealing
 	for( std::size_t iter = 0 ; iter < num_iter_max ; ++iter ) {
 		if( iter%num_iter_01percent == 0 ) {
-			std::cout << "." << std::flush ;
-			if( iter%num_iter_10percent == 0 ) {
-				std::cout << 100*iter/num_iter_max << "%" << std::endl ;
+			if( iter > 0 ) {
+				std::cout << "." << std::flush ;
+				if( iter%num_iter_10percent == 0 ) {
+					std::cout << 100*iter/num_iter_max << "%\n\t" << std::flush ;
+				}
+			} else {
+				std::cout << "\t" << std::flush ;
 			}
 		}
 		
@@ -603,9 +583,13 @@ void SpringNetwork<T,N>::anneal( void )
 			energy_best = heat_up( heatup_amplitude , heatup_num_config ) ;
 			iter += heatup_num_config ;
 			if( ((iter-heatup_num_config)%num_iter_01percent) >= (num_iter_01percent-heatup_num_config) ) {
-				std::cout << "." << std::flush ;
-				if( ((iter-heatup_num_config)%num_iter_10percent) >= (num_iter_10percent-heatup_num_config) ) {
-					std::cout << 100*iter/num_iter_max << "%" << std::endl ;
+				if( iter > 0 ) {
+					std::cout << "." << std::flush ;
+					if( ((iter-heatup_num_config)%num_iter_10percent) >= (num_iter_10percent-heatup_num_config) ) {
+						std::cout << 100*iter/num_iter_max << "%\n\t" << std::flush ;
+					}
+				} else {
+					std::cout << "\t" << std::flush ;
 				}
 			}
 			points_prev = points ;
