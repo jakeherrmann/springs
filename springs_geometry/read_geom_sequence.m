@@ -42,8 +42,8 @@ for ff = 1 : num_file
 	fid = fopen( filename ,'rb') ;
 	for pp = 1 : num_points
 		nodes.position(pp,:,ff) = fread( fid , num_dimensions , precision ) ;
-		nodes.force(pp,:,ff) = fread( fid , num_dimensions , precision ) ;
-		nodes.fixed(pp,:,ff) = fread( fid , 1              , 'uint8'   ) ;
+		nodes.force(pp,:,ff)    = fread( fid , num_dimensions , precision ) ;
+		nodes.fixed(pp,:,ff)    = fread( fid , 1              , 'uint8'   ) ;
 	end
 	fclose( fid ) ;
 	

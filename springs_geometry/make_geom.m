@@ -1,5 +1,5 @@
 
-dir_input = '/Users/jake/Documents/GitHub/springNet/springs/INPUT/' ;
+dir_input = fullfile('..','..','TEST') ;
 precision = 'float' ;
 geom_type = 'random_2D' ;
 

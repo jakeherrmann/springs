@@ -22,6 +22,22 @@
 #include <memory>
 #include <cstdint>
 
+#include <sys/stat.h>
+
+///______________________ make_dir ______________________///
+void make_dir( const std::string & dir_name )
+{
+	struct stat info ;
+	if( stat( dir_name.c_str() , &info ) != 0 ) {
+		std::system( ("mkdir " + dir_name).c_str() ) ;
+	} else if( info.st_mode & S_IFDIR ) {
+		// directory already exists
+	} else {
+		// exists but not a directory
+	}
+	return ;
+}
+
 ////////////////////////////////////////////////////////////
 ///////////////////// NETWORK PARAMETERS ///////////////////
 ////////////////////////////////////////////////////////////
@@ -29,10 +45,13 @@
 NetworkParameters::NetworkParameters( const std::string & dir_input ,
 									  const std::string & dir_output )
 {
-	this->dir_input       = dir_input ;
-	this->dir_output      = dir_output ;
-	file_input_parameters = dir_input + "network_parameters.txt" ;
+	this->dir_input        = dir_input ;
+	this->dir_output       = dir_output ;
+	make_dir( dir_output ) ;
+	file_input_parameters  = dir_input  + "network_parameters.txt" ;
+	file_output_parameters = dir_output + "network_parameters.txt" ;
 	load_parameters( file_input_parameters.c_str() ) ;
+	save_parameters( file_output_parameters.c_str() ) ;
 	return ;
 }
 
@@ -59,7 +78,21 @@ void NetworkParameters::load_parameters( const char * file_name )
 
 void NetworkParameters::save_parameters( const char * file_name )
 {
-	// TODO //
+	std::ofstream file ;
+	if( file_name != NULL ) {
+		file.open( file_name ) ;
+		if( !file ) {
+			std::cout << "COULD NOT OPEN FILE:\n" << file_name << std::endl ;
+		} else {
+			file << num_points                << '\n'
+				 << num_springs               << '\n'
+				 << precision                 << '\n'
+				 << num_dimensions            << '\n'
+				 << num_stiffness_tension     << '\n'
+				 << num_stiffness_compression ;
+			file.close() ;
+		}
+	}
 	return ;
 }
 
@@ -127,10 +160,12 @@ std::unique_ptr<ASpringNetwork> ASpringNetwork::create_spring_network_obj( const
 	if( network_parameters.precision.compare( "double" ) == 0 ) {
 		if     ( network_parameters.num_dimensions == 2 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<double,2>() ) ; }
 		else if( network_parameters.num_dimensions == 3 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<double,3>() ) ; }
+		else if( network_parameters.num_dimensions == 4 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<double,4>() ) ; }
 		else { return asn ; }
 	} else if( network_parameters.precision.compare( "float" ) == 0 ) {
 		if     ( network_parameters.num_dimensions == 2 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<float,2>() ) ; }
 		else if( network_parameters.num_dimensions == 3 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<float,3>() ) ; }
+		else if( network_parameters.num_dimensions == 4 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<float,4>() ) ; }
 		else { return asn ; }
 	} else {
 		return asn ;
@@ -144,10 +179,14 @@ void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters )
 {
 	dir_input           = network_parameters.dir_input ;
 	dir_output          = network_parameters.dir_output ;
-	file_input_nodes    = dir_input  + "network_setup_nodes.dat" ;
-	file_input_springs  = dir_input  + "network_setup_springs.dat" ;
-	file_output_nodes   = dir_output + "network_output_nodes.dat" ;
-	file_output_springs = dir_output + "network_output_springs.dat" ;
+	dir_output_iter     = dir_output + "iter/" ;
+	if( num_iter_save > 0 ) {
+		make_dir( dir_output_iter ) ;
+	}
+	file_input_nodes    = dir_input  + "network_nodes.dat" ;
+	file_input_springs  = dir_input  + "network_springs.dat" ;
+	file_output_nodes   = dir_output + "network_nodes.dat" ;
+	file_output_springs = dir_output + "network_springs.dat" ;
 	uni_0_1 = std::uniform_real_distribution<T>( 0.0,+1.0) ;
 	uni_1_1 = std::uniform_real_distribution<T>(-1.0,+1.0) ;
 	num_points  = network_parameters.num_points ;
@@ -260,7 +299,7 @@ void SpringNetwork<T,N>::save_network_binary( const char * file_nodes ,
 		for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 			write_data_uint32[0] = static_cast<std::uint32_t>( s->start - &points[0] ) ;
 			write_data_uint32[1] = static_cast<std::uint32_t>( s->end   - &points[0] ) ;
-			write_data_T[1] = s->rest_length ;
+			write_data_T[0] = s->rest_length ;
 			std::copy( s->stiffness_tension.begin()     , s->stiffness_tension.end()     , &write_data_T[1    ] ) ;
 			std::copy( s->stiffness_compression.begin() , s->stiffness_compression.end() , &write_data_T[1+NKT] ) ;
 			write_data_uint8[0] = static_cast<bool>( s->allow_compression ) ;
@@ -465,6 +504,9 @@ void SpringNetwork<T,N>::anneal( void )
 	T energy_init = energy ;
 	T energy_prev = energy ;
 	T energy_best = energy ;
+
+	// count how many intermediate iterations saved
+	std::size_t num_iter_saved = 0 ;
 	
 	// annealing solver parameters
 	// TODO // get these parameters from NetworkParameters (default/file)
@@ -547,10 +589,15 @@ void SpringNetwork<T,N>::anneal( void )
 			}
 		}
 		
-		if( ((iter%100)==0) && (iter<=10000) ) {
-			save_network_binary(
-				(dir_output+"iter_"+std::to_string(iter)+"_nodes.dat").c_str() ,
-				(dir_output+"iter_"+std::to_string(iter)+"_springs.dat").c_str() ) ;
+		if( num_iter_saved < num_iter_save ) {
+			if( ((iter%100)==0) && (iter<=10000) ) {
+				std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + "/" ;
+				make_dir( dir_output_iter_curr ) ;
+				save_network_binary(
+					(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
+					(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
+				++num_iter_saved ;
+			}
 		}
 		
 		// accept or reject new state based on change in energy
@@ -601,23 +648,26 @@ void SpringNetwork<T,N>::anneal( void )
 	return ;
 }
 
-
-
 /// EXPLICIT TEMPLATE INSTANTIATIONS ///
 template class Point<float ,2> ;
 template class Point<float ,3> ;
+template class Point<float ,4> ;
 template class Point<double,2> ;
 template class Point<double,3> ;
+template class Point<double,4> ;
 
 template class Spring<float ,2> ;
 template class Spring<float ,3> ;
+template class Spring<float ,4> ;
 template class Spring<double,2> ;
 template class Spring<double,3> ;
+template class Spring<double,4> ;
 
 template class SpringNetwork<float ,2> ;
 template class SpringNetwork<float ,3> ;
+template class SpringNetwork<float ,4> ;
 template class SpringNetwork<double,2> ;
 template class SpringNetwork<double,3> ;
-
+template class SpringNetwork<double,4> ;
 
 

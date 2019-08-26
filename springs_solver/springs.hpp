@@ -19,12 +19,16 @@
 #include "vectors_nd.hpp"
 
 ///
+void make_dir( const std::string & ) ;
+
+///
 class NetworkParameters {
 public:
 	//
 	std::string dir_input ;
 	std::string dir_output ;
 	std::string file_input_parameters ;
+	std::string file_output_parameters ;
 	//
 	std::size_t num_points  = 0 ;
 	std::size_t num_springs = 0 ;
@@ -70,6 +74,7 @@ public:
 ///
 class ASpringNetwork {
 public:
+	std::size_t num_iter_save = 0 ;
 	virtual void setup( const NetworkParameters & ) = 0 ;
 	virtual void solve( void ) = 0 ;
 	static std::unique_ptr<ASpringNetwork> create_spring_network_obj( const NetworkParameters & ) ;
@@ -99,6 +104,7 @@ private:
 	//
 	std::string dir_input ;
 	std::string dir_output ;
+	std::string dir_output_iter ;
 	std::string file_input_parameters ;
 	std::string file_input_nodes ;
 	std::string file_input_springs ;
