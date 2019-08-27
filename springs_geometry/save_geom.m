@@ -20,7 +20,7 @@ fprintf( fid , '%d\n' , num_stiffness_tension ) ;
 fprintf( fid , '%d\n' , num_stiffness_compression ) ;
 fclose( fid ) ;
 
-filename = fullfile( dir_input , 'network_setup_nodes.dat' ) ;
+filename = fullfile( dir_input , 'network_nodes.dat' ) ;
 fid = fopen( filename ,'wb') ;
 for nn = 1 : num_points
 	fwrite( fid , nodes.position(nn,:) , precision ) ;
@@ -29,11 +29,11 @@ for nn = 1 : num_points
 end
 fclose( fid ) ;
 
-filename = fullfile( dir_input , 'network_setup_springs.dat' ) ;
+filename = fullfile( dir_input , 'network_springs.dat' ) ;
 fid = fopen( filename ,'wb') ;
 for ss = 1 : num_springs
 	fwrite( fid , springs.nodes(ss,:)-1               , 'uint32'  ) ;
-	fwrite( fid , springs.restlength(ss)              , precision ) ;
+	fwrite( fid , springs.rest_length(ss)             , precision ) ;
 	fwrite( fid , springs.stiffness_tension(ss,:)     , precision ) ;
 	fwrite( fid , springs.stiffness_compression(ss,:) , precision ) ;
 	fwrite( fid , springs.compression(ss)             , 'uint8'   ) ;

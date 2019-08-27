@@ -90,7 +90,7 @@ num_springs = size(c,1) ;
 [ ~ , springs.nodes ] = ismember( c , nodes_id ) ;
 springs.stiffness_tension     = zeros([num_springs,num_stiffness_tension    ]) + 1.0 ;
 springs.stiffness_compression = zeros([num_springs,num_stiffness_compression]) + 1.0 ;
-springs.restlength  = zeros([num_springs,1]) + 0.25 ;
+springs.rest_length = zeros([num_springs,1]) + 0.25 ;
 springs.compression = false([num_springs,1]) ;
 
 % figure( ...

@@ -1,4 +1,3 @@
-
 function [ nodes , springs ] = make_geom_truncOct_3D( geom_size )
 % 3D soccer ball
 
@@ -33,7 +32,7 @@ nodes.force = zeros( size(nodes.position) ) ;
 springs.nodes = edges ;
 springs.stiffness_tension     = zeros([num_springs,num_stiffness_tension    ]) + 1.0 ;
 springs.stiffness_compression = zeros([num_springs,num_stiffness_compression]) + 1.0 ;
-springs.restlength = 0.25 * edges_length ;
+springs.rest_length = 0.25 * edges_length ;
 springs.compression = false([num_springs,1]) ;
 
 % boundary conditions

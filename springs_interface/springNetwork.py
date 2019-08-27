@@ -4,7 +4,6 @@ from .spring import Spring
 from pathlib import Path
 import struct
 import os
-import math
 from .springFileIO import FileVariable, FileFormat
 
 class SpringNetwork:
@@ -73,6 +72,12 @@ class SpringNetwork:
 		file_name = dir_output / 'network_springs.dat'
 		file_format = Spring.get_file_format(self.precision, self.num_stiffness_tension, self.num_stiffness_compression)
 		file_format.read_binary_file(file_name, self.springs)
+		self.connect_springs_nodes()
+
+	def connect_springs_nodes(self):
+		for spring in self.springs:
+			spring.node_start_pointer = self.nodes[spring.node_start]
+			spring.node_end_pointer   = self.nodes[spring.node_end  ]
 
 	def stretch(self, strain, dim):
 		for node in self.nodes:
@@ -80,24 +85,25 @@ class SpringNetwork:
 
 	def calc_spring_force(self):
 		for spring in self.springs:
-			position_start = self.nodes[spring.node_start].position
-			position_end   = self.nodes[spring.node_end  ].position
-			delta_position = [ position_end[n]-position_start[n] for n in range(self.num_dimensions) ]
-			length = math.sqrt(sum([ dx*dx for dx in delta_position ]))
-			delta_length = length - spring.rest_length
-			spring.strain = delta_length / spring.rest_length
-			spring.force = 0.0
-			if delta_length > 0.0:
-				delta_length_pow = delta_length
-				for k in spring.stiffness_tension:
-					spring.force += k * delta_length_pow
-					delta_length_pow *= delta_length
-			elif spring.compressible:
-				delta_length = abs(delta_length)
-				delta_length_pow = delta_length
-				for k in spring.stiffness_compression:
-					spring.force += k * delta_length_pow
-					delta_length_pow *= delta_length
+			spring.calc_force()
+			# position_start = self.nodes[spring.node_start].position
+			# position_end   = self.nodes[spring.node_end  ].position
+			# delta_position = [ position_end[n]-position_start[n] for n in range(self.num_dimensions) ]
+			# length = math.sqrt(sum([ dx*dx for dx in delta_position ]))
+			# delta_length = length - spring.rest_length
+			# spring.strain = delta_length / spring.rest_length
+			# spring.force = 0.0
+			# if delta_length > 0.0:
+			# 	delta_length_pow = delta_length
+			# 	for k in spring.stiffness_tension:
+			# 		spring.force += k * delta_length_pow
+			# 		delta_length_pow *= delta_length
+			# elif spring.compressible:
+			# 	delta_length = abs(delta_length)
+			# 	delta_length_pow = delta_length
+			# 	for k in spring.stiffness_compression:
+			# 		spring.force += k * delta_length_pow
+			# 		delta_length_pow *= delta_length
 
 	def break_spring_force(self, threshold):
 		self.springs = [ spring for spring in self.springs if spring.force < threshold ]

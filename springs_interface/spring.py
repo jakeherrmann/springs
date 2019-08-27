@@ -1,6 +1,7 @@
 
 from .node import Node
 from .springFileIO import FileVariable, FileFormat
+import math
 
 class Spring:
 
@@ -12,6 +13,8 @@ class Spring:
 		self.stiffness_compression = []
 		self.compressible = False
 		#
+		self.node_start_pointer = None
+		self.node_end_pointer = None
 		self.force = 0.0
 		self.strain = 0.0
 		self.broken = False
@@ -33,3 +36,24 @@ class Spring:
 		file_format.variables.append( FileVariable('stiffness_compression',FPP,NSC,[float],True) )
 		file_format.variables.append( FileVariable('compressible'         ,'?',1  ,bool   ,True) )
 		return file_format
+
+	def calc_force(self):
+		position_start = self.node_start_pointer.position
+		position_end   = self.node_end_pointer.position
+		delta_position = [ x_end-x_start for x_start, x_end in zip(position_start, position_end) ]
+		length = math.sqrt(sum([ dx*dx for dx in delta_position ]))
+		delta_length = length - self.rest_length
+		self.strain = delta_length / self.rest_length
+		self.force = 0.0
+		if delta_length > 0.0:
+			delta_length_pow = delta_length
+			for k in self.stiffness_tension:
+				self.force += k * delta_length_pow
+				delta_length_pow *= delta_length
+		elif self.compressible:
+			delta_length = abs(delta_length)
+			delta_length_pow = delta_length
+			for k in self.stiffness_compression:
+				self.force += k * delta_length_pow
+				delta_length_pow *= delta_length
+
