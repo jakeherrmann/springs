@@ -1,3 +1,7 @@
-from springs_interface.node import Node
-from springs_interface.spring import Spring
-from springs_interface.springNetwork import SpringNetwork
+from .node import Node
+from .spring import Spring
+from .boundary import Boundary
+from .springNetwork import SpringNetwork
+
+from .springs_geometry import make_geom_hexagon_2D
+from .springs_graphics import display

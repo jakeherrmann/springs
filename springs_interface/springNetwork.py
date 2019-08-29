@@ -1,23 +1,39 @@
 
-from .node   import Node
-from .spring import Spring
+from .node     import Node
+from .spring   import Spring
+from .boundary import Boundary
+from .springFileIO import FileVariable, FileFormat
 from pathlib import Path
 import struct
 import os
-from .springFileIO import FileVariable, FileFormat
 
 class SpringNetwork:
 	def __init__(self, num_dimensions=2, precision='float'):
 		self.num_nodes = 0
 		self.num_springs = 0
+		self.num_boundaries = 0
 		self.num_dimensions = num_dimensions
 		self.precision = precision
 		self.num_stiffness_tension = 1
 		self.num_stiffness_compression = 0
 		self.nodes = []
 		self.springs = []
+		self.boundaries = []
 		self.dir_input = None
 		self.dir_output = None
+
+	def setup(self, nodes=None, springs=None, boundaries=None):
+		if nodes is not None:
+			self.nodes = nodes
+			self.num_nodes = len(nodes)
+		if springs is not None:
+			self.springs = springs
+			self.num_springs = len(springs)
+			self.connect_springs_nodes()
+		if boundaries is not None:
+			self.boundaries = boundaries
+			self.num_boundaries = len(boundaries)
+			self.connect_boundaries_nodes()
 
 	def solve(self):
 		self.write_spring_network(self.dir_input)
@@ -64,8 +80,8 @@ class SpringNetwork:
 			self.num_dimensions            = int(file.readline())
 			self.num_stiffness_tension     = int(file.readline())
 			self.num_stiffness_compression = int(file.readline())
-		self.nodes   = [   Node(self.num_dimensions) for count in range(self.num_nodes  ) ]
-		self.springs = [ Spring(self.num_dimensions) for count in range(self.num_springs) ]
+		self.nodes   = [ Node(self.num_dimensions) for count in range(self.num_nodes  ) ]
+		self.springs = [ Spring() for count in range(self.num_springs) ]
 		file_name = dir_output / 'network_nodes.dat'
 		file_format = Node.get_file_format(self.num_dimensions, self.precision)
 		file_format.read_binary_file(file_name, self.nodes)
@@ -79,31 +95,21 @@ class SpringNetwork:
 			spring.node_start_pointer = self.nodes[spring.node_start]
 			spring.node_end_pointer   = self.nodes[spring.node_end  ]
 
-	def stretch(self, strain, dim):
+	def connect_boundaries_nodes(self):
+		for boundary in self.boundaries:
+			boundary.nodes_pointer = [ self.nodes[n] for n in boundary.nodes ]
+
+	def apply_boundary_conditions(self):
+		for boundary in self.boundaries:
+			boundary.apply_conditions()
+
+	def apply_stretch(self, stretch, dim):
 		for node in self.nodes:
-			node.position[dim] *= 1.0+strain
+			node.position[dim] *= stretch
 
 	def calc_spring_force(self):
 		for spring in self.springs:
 			spring.calc_force()
-			# position_start = self.nodes[spring.node_start].position
-			# position_end   = self.nodes[spring.node_end  ].position
-			# delta_position = [ position_end[n]-position_start[n] for n in range(self.num_dimensions) ]
-			# length = math.sqrt(sum([ dx*dx for dx in delta_position ]))
-			# delta_length = length - spring.rest_length
-			# spring.strain = delta_length / spring.rest_length
-			# spring.force = 0.0
-			# if delta_length > 0.0:
-			# 	delta_length_pow = delta_length
-			# 	for k in spring.stiffness_tension:
-			# 		spring.force += k * delta_length_pow
-			# 		delta_length_pow *= delta_length
-			# elif spring.compressible:
-			# 	delta_length = abs(delta_length)
-			# 	delta_length_pow = delta_length
-			# 	for k in spring.stiffness_compression:
-			# 		spring.force += k * delta_length_pow
-			# 		delta_length_pow *= delta_length
 
 	def break_spring_force(self, threshold):
 		self.springs = [ spring for spring in self.springs if spring.force < threshold ]
