@@ -49,6 +49,7 @@ public:
 	Vector<T,N> position ;
 	Vector<T,N> force_applied ;
 	bool fixed ;
+	bool not_referenced ;
 } ;
 
 ///

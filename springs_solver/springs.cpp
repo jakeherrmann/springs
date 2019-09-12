@@ -321,6 +321,7 @@ void SpringNetwork<T,N>::construct_network( void )
 {
 	for( std::size_t p = 0 ; p < num_points ; ++p ) {
 		nodes[p].point = &points[p] ;
+		points[p].not_referenced = true ;
 	}
 	std::size_t p_start ;
 	std::size_t p_end ;
@@ -329,8 +330,11 @@ void SpringNetwork<T,N>::construct_network( void )
 		p_end   = springs[s].end   - &points[0] ;
 		nodes[p_start].links.push_back( (Link){ &points[p_end  ] , &springs[s] , static_cast<T>(+1) } ) ;
 		nodes[p_end  ].links.push_back( (Link){ &points[p_start] , &springs[s] , static_cast<T>(-1) } ) ;
+		points[p_start].not_referenced = false ;
+		points[p_end  ].not_referenced = false ;
 	}
-	nodes.erase( std::remove_if( nodes.begin() , nodes.end() , []( Node n ){ return n.point->fixed ; } ) , nodes.end() ) ;
+	nodes.erase( std::remove_if( nodes.begin() , nodes.end() , []( Node n ){ return n.point->fixed          ; } ) , nodes.end() ) ;
+	nodes.erase( std::remove_if( nodes.begin() , nodes.end() , []( Node n ){ return n.point->not_referenced ; } ) , nodes.end() ) ;
 	return ;
 }
 

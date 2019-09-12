@@ -1,1 +1,2 @@
 from .make_geom_hexagon_2D import make_geom_hexagon_2D
+from .make_geom_truncoct_3D import make_geom_truncoct_3D

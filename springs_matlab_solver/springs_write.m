@@ -1,4 +1,4 @@
-function save_geom( dir_input , precision , nodes , springs )
+function springs_write( dir_input , precision , nodes , springs )
 
 if ~exist( dir_input ,'dir')
 	mkdir( dir_input ) ;
