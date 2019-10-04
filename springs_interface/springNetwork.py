@@ -4,10 +4,20 @@ from .spring    import Spring
 from .boundary  import Boundary
 from .springFileIO import FileVariable, FileFormat
 from pathlib import Path
+
+import operator
 import struct
 import os
 
 class SpringNetwork:
+	relops = {
+		'>' : operator.gt ,
+		'>=': operator.ge ,
+		'<' : operator.lt ,
+		'<=': operator.le ,
+		'==': operator.eq ,
+		'!=': operator.ne }
+
 	def __init__(self, num_dimensions=2, precision='float'):
 		self.num_nodes = 0
 		self.num_springs = 0
@@ -173,7 +183,7 @@ class SpringNetwork:
 		for spring in self.springs:
 			spring.calc_force()
 
-	def break_spring(self, break_variable, threshold):
+	def break_spring(self, break_variable, threshold, relop='>='):
 		if hasattr(self.springs[0], break_variable):
 			# now, set all nodes to not referenced
 			# later, set the nodes of non-broken springs to referenced
@@ -181,7 +191,9 @@ class SpringNetwork:
 				node.referenced = False
 			for spring in self.springs:
 				if not spring.broken:
-					spring.broken = getattr(spring, break_variable) >= threshold
+					value = getattr(spring, break_variable)
+					value = value[0] if isinstance(value, list) else value
+					spring.broken = SpringNetwork.relops[relop](value, threshold)
 					if not spring.broken:
 						spring.node_start_pointer.referenced = True
 						spring.node_end_pointer.referenced = True

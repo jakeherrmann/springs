@@ -6,11 +6,14 @@ import matplotlib.collections as mplcol
 import matplotlib.colors as mplc
 import mpl_toolkits.mplot3d as mpl3d
 
-def display(net, **kwargs):
+def display(net, show_slice=False, **kwargs):
 	if net.num_dimensions==2:
 		display_2D(net, **kwargs)
 	elif net.num_dimensions==3:
-		display_3D_slice(net, **kwargs)
+		if show_slice:
+			display_3D_slice(net, **kwargs)
+		else:
+			display_3D(net, **kwargs)
 
 def display_2D(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True):
 	cmap = plt.get_cmap('inferno')
@@ -18,7 +21,10 @@ def display_2D(spring_network, color_variable=None, color_range=None, ax_lims=No
 		c = [(0.0,0.0,0.0)] * len(spring_network.springs)
 	else:
 		if hasattr(spring_network.springs[0], color_variable):
-			v = [ getattr(spring,color_variable) for spring in spring_network.springs ]
+			if isinstance(getattr(spring_network.springs[0],color_variable), list):
+				v = [ getattr(spring,color_variable)[0] for spring in spring_network.springs ]
+			else:
+				v = [ getattr(spring,color_variable) for spring in spring_network.springs ]
 		else:
 			v = [0.0] * len(spring_network.springs)
 		if color_range is None:
@@ -60,7 +66,7 @@ def display_2D(spring_network, color_variable=None, color_range=None, ax_lims=No
 			plt.draw()
 			plt.pause(delay)
 
-def display_3D_slice(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True, show_structures=False):
+def display_3D_slice(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True, structures=None):
 	plane_point  = np.array([2.0, 2.0, 5.0])
 	plane_normal = np.array([0.0, 0.0, 1.0])
 	plane_basis  = [
@@ -69,7 +75,7 @@ def display_3D_slice(spring_network, color_variable=None, color_range=None, ax_l
 	cmap = plt.get_cmap('inferno')
 	xyz_segments = []
 	c = []
-	for structure in spring_network.structures:
+	for structure in structures:
 		tri_points = np.stack([ np.asarray(n.position) for n in structure.nodes_pointer ])
 		if tri_points.shape[0]==3:
 			# plane-triangle intersection
@@ -140,7 +146,7 @@ def display_3D_slice(spring_network, color_variable=None, color_range=None, ax_l
 			plt.draw()
 			plt.pause(delay)
 
-def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=False, show=True, show_structures=False):
+def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=False, show=True, structures=None):
 	xyz_segments = [
 		np.stack([
 			np.asarray(spring.node_start_pointer.position),
@@ -178,13 +184,13 @@ def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=No
 	ax.xaxis._axinfo["grid"]['color'] = (1.0,1.0,1.0,0.0)
 	ax.yaxis._axinfo["grid"]['color'] = (1.0,1.0,1.0,0.0)
 	ax.zaxis._axinfo["grid"]['color'] = (1.0,1.0,1.0,0.0)
-	if show_structures:
+	if structures is not None:
 		xyz_walls = [
 			np.stack([ np.asarray(node.position) for node in structure.nodes_pointer ])
-			for structure in spring_network.structures ]
+			for structure in structures ]
 		cmap = plt.get_cmap('inferno')
 		if color_variable is None:
-			c = [(0.3,0.3,1.0)] * len(spring_network.structures)
+			c = [(0.3,0.3,1.0)] * len(structures)
 		else:
 			if hasattr(spring_network.springs[0], color_variable):
 				v = [ getattr(spring, color_variable) for spring in spring_network.springs ]
@@ -194,7 +200,7 @@ def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=No
 				vmin = min(v)
 				vmax = max(v)
 				color_range = (vmin, vmax) if vmin!=vmax else (vmin,vmin+1.0)
-			w = [ sum([ v[s] for s in w.springs ])/len(w.springs) for w in spring_network.structures ]
+			w = [ sum([ v[s] for s in w.springs ])/len(w.springs) for w in structures ]
 			w = [ (wi-color_range[0])/(color_range[1]-color_range[0]) for wi in w ]
 			w = [ max(0.0, min(1.0, wi)) for wi in w ]
 			w = [ 1.0-wi for wi in w ]

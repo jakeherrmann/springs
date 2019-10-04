@@ -1,3 +1,4 @@
+from .agent_fibroblast import Agent_Fibroblast
 
 import springs_interface as spr
 
@@ -5,10 +6,12 @@ class Lung:
 	def __init__(self,
 			spring_network=None,
 			walls=None,
+			agents=None,
 			spring_break_variable=None,
 			spring_break_threshold=0.0):
 		self.net = spring_network
 		self.walls = walls
+		self.agents = agents
 		self.spring_break_variable  = spring_break_variable
 		self.spring_break_threshold = spring_break_threshold
 		self.alveoli = None
@@ -32,3 +35,15 @@ class Lung:
 		self.net.calc_spring_force()
 		if self.spring_break_variable is not None and self.spring_break_threshold is not None:
 			self.net.break_spring(self.spring_break_variable, self.spring_break_threshold)
+
+	def agent_actions(self, time_step):
+		if self.agents is not None:
+			for agent in self.agents:
+				agent.do_actions(time_step)
+			self.net.break_spring('stiffness_tension', 0.0, relop='<=')
+
+	def add_fibroblast_every_spring(self):
+		self.agents = []
+		for spring in self.net.springs:
+			self.agents.append( Agent_Fibroblast(location=spring) )
+
