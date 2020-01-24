@@ -15,7 +15,6 @@ class Lung:
 		self.spring_break_variable  = spring_break_variable
 		self.spring_break_threshold = spring_break_threshold
 		self.alveoli = None
-		self.fibroblasts = None
 
 	def save(self, save_dir):
 		self.net.write_spring_network(save_dir)
@@ -44,6 +43,6 @@ class Lung:
 
 	def add_fibroblast_every_spring(self):
 		self.agents = []
-		for spring in self.net.springs:
-			self.agents.append( Agent_Fibroblast(location=spring) )
+		for spring_index, spring in enumerate(self.net.springs):
+			self.agents.append( Agent_Fibroblast(spring_index=spring_index, spring=spring) )
 

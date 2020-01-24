@@ -6,7 +6,7 @@ end
 
 num_points     = size( nodes.position ,1) ;
 num_dimensions = size( nodes.position ,2) ;
-num_springs    = size( springs.nodes   ,1) ;
+num_springs    = size( springs.nodes  ,1) ;
 num_stiffness_tension     = size( springs.stiffness_tension     ,2) ;
 num_stiffness_compression = size( springs.stiffness_compression ,2) ;
 

@@ -1,4 +1,4 @@
-function [] = springs_solve( nodes , springs )
+function [ nodes , springs ] = springs_solve( nodes , springs )
 
 dir_input  = 'springs_input' ;
 dir_output = 'springs_output' ;

@@ -338,12 +338,60 @@ void SpringNetwork<T,N>::construct_network( void )
 	return ;
 }
 
+///_________________  get_scale_network _________________///
+template< class T , std::size_t N >
+void SpringNetwork<T,N>::get_scale_network( void )
+{
+	scale_min = nodes.begin()->point->position ;
+	scale_max = nodes.begin()->point->position ;
+	iterNode n ;
+	iterNode n_end ;
+	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
+		for( std::size_t d = 0 ; d < N ; ++d ) {
+			if( n->point->position[d] < scale_min[d] ) {
+				scale_min[d] = n->point->position[d] ;
+			} else if( n->point->position[d] > scale_max[d] ) {
+				scale_max[d] = n->point->position[d] ;
+			}
+		}
+	}
+	scale_range = scale_max - scale_min ;
+	return ;
+}
+
+///__________________  rescale_network __________________///
+template< class T , std::size_t N >
+void SpringNetwork<T,N>::rescale_network( const int & direction )
+{
+	switch( direction ) {
+		case +1:
+			// set to normale scale from original scale
+			for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
+				p->position -= scale_min ;
+				p->position /= scale_range ;
+			}
+			break ;
+
+		case -1:
+			// reset to original scale from normalize scale
+			for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
+				p->position *= scale_range ;
+				p->position += scale_min ;
+			}
+			break ;
+
+		default:
+			break ;
+	}
+	return ;
+}
+
 ///_______________ find_max_spring_length _______________///
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::find_max_spring_length( void )
 {
-	Vector<T,N> x_min ;
-	Vector<T,N> x_max ;
+	Vector<T,N> x_min = points.begin()->position ;
+	Vector<T,N> x_max = points.begin()->position ;
 	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
 		for( std::size_t n = 0 ; n < N ; ++n ) {
 			x_min[n] = ( p->position[n] < x_min[n] ) ? p->position[n] : x_min[n] ;
@@ -356,6 +404,7 @@ void SpringNetwork<T,N>::find_max_spring_length( void )
 		dx = x_max[n] - x_min[n] ;
 		max_spring_length = ( dx > max_spring_length ) ? dx : max_spring_length ;
 	}
+	max_spring_length *= 3.0 ;
 	return ;
 }
 
@@ -376,7 +425,6 @@ T SpringNetwork<T,N>::total_energy( void )
 		displacement -= points_init[p].position ;
 		energy -= points[p].force_applied.dot( displacement ) ;
 	}
-	
 	// account for force imbalances, "potential energy"
 	// combine external applied force & internal spring forces
 	iterNode n ;
@@ -384,26 +432,22 @@ T SpringNetwork<T,N>::total_energy( void )
 	iterLink l ;
 	iterLink l_end ;
 	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
-		n->net_force = n->point->force_applied ;
+		n->point->net_force = n->point->force_applied ;
 		for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
 			if( l->spring_direction > static_cast<T>(0) ) {
-				n->net_force += l->spring->get_force() ;
+				n->point->net_force += l->spring->get_force() ;
 			} else {
-				n->net_force -= l->spring->get_force() ;
+				n->point->net_force -= l->spring->get_force() ;
 			}
 		}
-		n->net_force_magnitude = n->net_force.norm() ;
+		n->point->net_force_magnitude = n->point->net_force.norm() ;
 	}
-	T sum_spring_length = static_cast<T>(0) ;
 	T sum_net_force_magnitude = static_cast<T>(0) ;
-	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-		sum_spring_length += s->length ;
-	}
 	for( iterNode n = nodes.begin() ; n != nodes.end() ; ++n ) {
-		sum_net_force_magnitude += n->net_force_magnitude ;
+		sum_net_force_magnitude += n->point->net_force_magnitude ;
 	}
-	energy += ( sum_net_force_magnitude * sum_spring_length ) ;
-	
+	energy += ( sum_net_force_magnitude * scale_range.max() ) ;
+
 	return energy ;
 }
 
@@ -416,7 +460,7 @@ void SpringNetwork<T,N>::move_points_force( const T & force_step_size )
 	// apply net force & move small displacement towards equilibrating position
 	Vector<T,N> small_displacement ;
 	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
-		small_displacement = n->net_force ;
+		small_displacement = n->point->net_force ;
 		small_displacement *= force_step_size ;
 		n->point->position += small_displacement ;
 	}
@@ -427,10 +471,14 @@ void SpringNetwork<T,N>::move_points_force( const T & force_step_size )
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::move_points_rand( const T & amplitude )
 {
-	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
-		for( std::size_t n = 0 ; n < N ; ++n ) {
-			p->position[n] += amplitude * uni_1_1(rng) ;
+	iterNode n ;
+	iterNode n_end ;
+	Vector<T,N> small_displacement ;
+	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
+		for( std::size_t d = 0 ; d < N ; ++d ) {
+			small_displacement[d] = amplitude * uni_1_1(rng) ;
 		}
+		n->point->position += small_displacement ;
 	}
 	return ;
 }
@@ -483,7 +531,11 @@ T SpringNetwork<T,N>::heat_up( const T & amplitude , const T & num_config_test )
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::solve( void )
 {
+	get_scale_network() ;
+	//rescale_network(+1) ;
 	anneal() ;
+	//minimize_energy() ;
+	//rescale_network(-1) ;
 	save_output() ;
 	return ;
 }
@@ -495,6 +547,102 @@ void SpringNetwork<T,N>::save_output( void )
 	save_network_binary( file_output_nodes.c_str() , file_output_springs.c_str() ) ;
 	return ;
 }
+
+///
+template< class T , std::size_t N >
+void SpringNetwork<T,N>::minimize_energy( void )
+{
+	// copy current state to initial, previous, and best states
+	points_init = points ;
+	points_prev = points ;
+	points_best = points ;
+	T energy = total_energy() ;
+	T energy_prev = energy ;
+	T energy_best = energy ;
+
+	//
+	std::size_t num_iter_max = 500000 ;
+	std::size_t num_iter_shake = 100 ;
+	std::size_t num_iter_since_best = 0 ;
+	std::size_t num_iter_since_best_max = 10000 ;
+	std::size_t num_iter_zero_change = 0 ;
+	std::size_t num_iter_zero_change_max = 10000 ;
+	bool counting_iter_since_best = false ;
+	T force_step_size = 1E-6 ;
+	T force_step_size_reduction = 0.9 ; // in range (0,1)
+	T force_step_size_min = 1E-12 ;
+	T sum_net_force_magnitude ;
+	T sum_net_force_magnitude_tol = 1E-12 ;
+	T shake_step_size = 1E-4 ;
+	T shake_step_size_reduction = 0.999 ;
+
+	//
+	for( std::size_t iter = 0 ; iter < num_iter_max ; ++iter ) {
+
+		// perturb the system with some randomness
+		if( iter%num_iter_shake == 0 ) {
+			move_points_rand( shake_step_size ) ;
+			shake_step_size *= shake_step_size_reduction ;
+		}
+
+		// basic line search
+		energy_prev = energy ;
+		points_prev = points ;
+		force_step_size /= force_step_size_reduction ;
+		do {
+			points = points_prev ;
+			move_points_force( force_step_size ) ;
+			energy = total_energy() ;
+			force_step_size *= force_step_size_reduction ;
+		} while( (energy>=energy_prev) && (force_step_size>force_step_size_min) ) ;
+		force_step_size /= force_step_size_reduction ;
+		sum_net_force_magnitude = energy ;
+
+		//
+		if( energy == energy_prev ) {
+			std::cout << energy << '\n' << energy_prev << std::endl ;
+			++num_iter_zero_change ;
+		}
+
+		// check if best found so far
+		if( energy < energy_best ) {
+			energy_best = energy ;
+			points_best = points ;
+			num_iter_since_best = 0 ;
+			if( iter > 50000 ) {
+				counting_iter_since_best = true ;
+			}
+		} else if( counting_iter_since_best ) {
+			++num_iter_since_best ;
+		}
+
+		//**
+		if( iter%200 == 0 ) {
+			std::cout
+				<< std::setprecision(3)
+				<< std::scientific
+				<< "  " << std::setw(10) << energy
+				<< "  " << std::setw(10) << energy_prev
+				<< "  " << std::setw(10) << energy_best
+				<< "  " << std::setw(10) << energy-energy_prev
+				<< "  " << std::setw(10) << force_step_size
+				<< std::endl ;
+		}
+		//*/
+
+		// stopping condition
+		if(    (sum_net_force_magnitude<sum_net_force_magnitude_tol)
+			|| (force_step_size<=force_step_size_min)
+			|| (num_iter_since_best>num_iter_since_best_max)
+			|| (num_iter_zero_change>num_iter_zero_change_max) )
+		{
+			break ;
+		}
+	}
+	points = points_best ;
+	energy = energy_best ;
+}
+
 
 ///_______________________ anneal _______________________///
 template< class T , std::size_t N >
@@ -514,7 +662,7 @@ void SpringNetwork<T,N>::anneal( void )
 	
 	// annealing solver parameters
 	// TODO // get these parameters from NetworkParameters (default/file)
-	T force_step_size = static_cast<T>(0.01) ;
+	T force_step_size = static_cast<T>(0.02) ;
 	T temperature_reduction = static_cast<T>(0.99) ;
 	T energy_compare ;
 	T energy_compare_min = static_cast<T>(1E-12) ;
@@ -522,8 +670,10 @@ void SpringNetwork<T,N>::anneal( void )
 	T relative_change_energy_tol = static_cast<T>(1E-6) ;
 	std::size_t num_iter_max       = 500000 ;
 	std::size_t num_iter_heatup    = num_iter_max /   5 ;
-	std::size_t num_iter_01percent = num_iter_max / 100 ;
 	std::size_t num_iter_10percent = num_iter_max /  10 ;
+	std::size_t num_iter_01percent = num_iter_max / 100 ;
+	std::size_t num_consecutive_reject     =  0 ;
+	std::size_t num_consecutive_reject_max = 20 ;
 	std::size_t num_small_change     =  0 ;
 	std::size_t num_small_change_max = 20 ;
 	std::size_t num_temperature_reductions     =    0 ;
@@ -541,23 +691,29 @@ void SpringNetwork<T,N>::anneal( void )
 	
 	// begin annealing
 	for( std::size_t iter = 0 ; iter < num_iter_max ; ++iter ) {
+
+		//	print status
 		if( iter%num_iter_01percent == 0 ) {
 			if( iter > 0 ) {
 				std::cout << "." << std::flush ;
 				if( iter%num_iter_10percent == 0 ) {
-					std::cout << 100*iter/num_iter_max << "%\n\t" << std::flush ;
+					std::cout << 100*iter/num_iter_max << "%\n" << std::flush ;
 				}
 			} else {
-				std::cout << "\t" << std::flush ;
+				std::cout << '\n' << std::flush ;
 			}
 		}
 		
-		// randomize the order of nodes and test a new configuration
-		// if configuration is too extreme, reset network to best
-		// no need for random ordering if move_points_force() does not depend on order
+		// randomize the order of nodes?
+		// no need for random ordering if force/energy does not depend on order
 		///std::random_shuffle( nodes.begin() , nodes.end() ) ;
+		
+		// test a new configuration, force-driven or random
 		move_points_force( force_step_size ) ;
+		//move_points_rand( force_step_size * 1E-5 ) ;
 		energy = total_energy() ;
+		
+		// if configuration is too extreme, reset network to best
 		reboot = test_reboot() ;
 		if( reboot ) {
 			std::cout << "REBOOT" << std::endl ;
@@ -572,7 +728,7 @@ void SpringNetwork<T,N>::anneal( void )
 		// assume the current state is near local minimum, and
 		// reduce the temperature
 		relative_change_energy = std::fabs( energy - energy_prev ) / energy_compare ;
-		/**
+		//**
 		if( iter%100 == 0 ) {
 			std::cout
 				<< "\t" << energy
@@ -592,6 +748,13 @@ void SpringNetwork<T,N>::anneal( void )
 				num_small_change = 0 ;
 			}
 		}
+
+		//*/
+		if( num_consecutive_reject >= num_consecutive_reject_max ) {
+			num_consecutive_reject = 0 ;
+			force_step_size *= temperature_reduction ; // TEST REMOVE
+		}
+		//**/
 		
 		if( num_iter_saved < num_iter_save ) {
 			if( ((iter%100)==0) && (iter<=10000) ) {
@@ -612,12 +775,15 @@ void SpringNetwork<T,N>::anneal( void )
 			points_prev = points ;
 			energy_best = energy ;
 			energy_prev = energy ;
+			num_consecutive_reject = 0 ;
 		}
 		else if( accept_new_points( energy-energy_prev , temperature ) ) {
 			points_prev = points ;
 			energy_prev = energy ;
+			num_consecutive_reject = 0 ;
 		} else {
 			points = points_prev ;
+			++num_consecutive_reject ;
 		}
 		
 		// if no temperature reductions after many iterations, reset and

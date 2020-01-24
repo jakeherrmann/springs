@@ -33,7 +33,7 @@ int main( int argc , const char * argv[] ) {
 	// assume quiet mode, turn on verbose if desired
 	std::cout.setstate( std::ios_base::badbit ) ;
 	if( argc > 4 ) {
-		if( !( argv[4][0] != '0' ) ) {
+		if( argv[4][0] != '0' ) {
 			std::cout.clear() ;
 		}
 	}

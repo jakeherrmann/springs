@@ -72,6 +72,29 @@ const
 	return std::sqrt(s) ;
 }
 
+// max and min
+template< class T , std::size_t N >
+T Vector<T,N>::max( void )
+const
+{
+	T s = x[0] ;
+	for( std::size_t n = 1 ; n < N ; ++n ) {
+		s = ( x[n] > s ) ? x[n] : s ;
+	}
+	return s ;
+}
+template< class T , std::size_t N >
+T Vector<T,N>::min( void )
+const
+{
+	T s = x[0] ;
+	for( std::size_t n = 1 ; n < N ; ++n ) {
+		s = ( x[n] < s ) ? x[n] : s ;
+	}
+	return s ;
+}
+
+
 // addition of two vectors
 template< class T , std::size_t N >
 Vector<T,N> Vector<T,N>::operator+( const Vector<T,N> & y )

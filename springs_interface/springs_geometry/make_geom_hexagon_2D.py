@@ -6,6 +6,7 @@ from ..springNetwork import SpringNetwork
 import math
 import numpy as np
 import scipy.spatial
+# import matplotlib.pyplot as plt
 
 def make_geom_hexagon_2D(geom_size=[1,1]):
 	num_row = geom_size[1] + 3
@@ -22,15 +23,19 @@ def make_geom_hexagon_2D(geom_size=[1,1]):
 	vor = scipy.spatial.Voronoi( xyz )
 	v = vor.vertices
 	e = vor.ridge_vertices
+
+	# scipy.spatial.voronoi_plot_2d(vor)
+	# plt.show()
 	
 	# remove extraneous vertices
+	small_number = 0.01
 	e = [ ei for ei in e if all([ eij>=0 for eij in ei ]) ]
-	e = [ ei for ei in e if all([ np.all(v[eij,:]>=0.0)               for eij in ei ]) ]
-	e = [ ei for ei in e if all([ v[eij,1]<=((num_row-1)*sqrt3*1.01)  for eij in ei ]) ]
-	e = [ ei for ei in e if all([ v[eij,0]>0.5*1.01                   for eij in ei ]) ]
-	e = [ ei for ei in e if all([ v[eij,0]<((num_col-1)*1.5-0.5)*0.99 for eij in ei ]) ]
-	e = [ ei for ei in e if any([ v[eij,1]>(0.5*sqrt3*1.01)          for eij in ei ]) ]
-	e = [ ei for ei in e if any([ v[eij,1]<((num_row-1)*sqrt3*0.99)  for eij in ei ]) ]
+	e = [ ei for ei in e if all([ np.all(v[eij,:]>=0.0)                         for eij in ei ]) ]
+	e = [ ei for ei in e if all([ v[eij,1]<=((num_row-1)*sqrt3)  + small_number for eij in ei ]) ]
+	e = [ ei for ei in e if all([ v[eij,0]>0.5                   + small_number for eij in ei ]) ]
+	e = [ ei for ei in e if all([ v[eij,0]<((num_col-1)*1.5-0.5) - small_number for eij in ei ]) ]
+	e = [ ei for ei in e if any([ v[eij,1]>(0.5*sqrt3)           + small_number for eij in ei ]) ]
+	e = [ ei for ei in e if any([ v[eij,1]<((num_row-1)*sqrt3)   - small_number for eij in ei ]) ]
 
 	# separate boundary edges (to neighboring alveoli) from internal edges
 	b = [

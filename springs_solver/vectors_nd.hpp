@@ -29,6 +29,10 @@ public:
 	T distance( const Vector<T,N> & ) const ;
 	T norm( void ) const ;
 	
+	//
+	T max( void ) const ;
+	T min( void ) const ;
+
 	// element-wise vector operations
 	Vector<T,N>   operator+ ( const Vector<T,N> & ) const ;
 	Vector<T,N> & operator+=( const Vector<T,N> & ) ;

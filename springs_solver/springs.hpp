@@ -48,6 +48,8 @@ class Point {
 public:
 	Vector<T,N> position ;
 	Vector<T,N> force_applied ;
+	Vector<T,N> net_force ;
+	T net_force_magnitude = static_cast<T>(0) ;
 	bool fixed ;
 	bool not_referenced ;
 } ;
@@ -93,8 +95,6 @@ class SpringNetwork : public ASpringNetwork {
 	struct Node {
 		Point<T,N> * point ;
 		std::vector< Link > links ;
-		Vector<T,N> net_force ;
-		T net_force_magnitude = static_cast<T>(0) ;
 	} ;
 	// iterator types
 	typedef typename std::vector<  Point<T,N> >::iterator iterPoint ;
@@ -124,6 +124,9 @@ private:
 	std::uniform_real_distribution<T> uni_0_1 ;
 	std::uniform_real_distribution<T> uni_1_1 ;
 	T max_spring_length ;
+	Vector<T,N> scale_min ;
+	Vector<T,N> scale_max ;
+	Vector<T,N> scale_range ;
 public:
 	//
 	T total_energy( void ) ;
@@ -135,12 +138,15 @@ public:
 	T heat_up( const T & , const T & ) ;
 	void solve( void ) ;
 	void anneal( void ) ;
+	void minimize_energy( void ) ;
 	void save_output( void ) ;
 	// input & output
 	void setup( const NetworkParameters & ) ;
 	void load_network_binary( const char * , const char * ) ;
 	void save_network_binary( const char * , const char * ) ;
 	void construct_network( void ) ;
+	void get_scale_network( void ) ;
+	void rescale_network( const int & ) ;
 } ;
 
 #endif /* springs_hpp */
