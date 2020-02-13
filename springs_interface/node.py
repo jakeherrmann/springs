@@ -7,6 +7,9 @@ class Node:
 		self.force      = [0.0] * num_dimensions
 		self.fixed      = False
 		self.referenced = True
+		#
+		self.adjacent_nodes_pointers = []
+		self.adjacent_springs_pointers = []
 
 	@staticmethod
 	def get_file_format(num_dimensions, precision, use_solver_format=False):

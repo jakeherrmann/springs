@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 def main(argv):
+	os.system('mkdir ./springs_solver/obj')
 	os.system('make -C ./springs_solver clean')
 	os.system('make -C ./springs_solver')
 

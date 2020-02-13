@@ -24,24 +24,35 @@
 #include "springs.hpp"
 
 int main( int argc , const char * argv[] ) {
-	// ARGV[0] := PATH TO THIS SOLVER EXECUTABLE
-	// ARGV[1] := INPUT DIRECTORY
-	// ARGV[2] := OUTPUT DIRECTORY
-	// ARGV[3] := NUMBER OF ITERATIONS TO SAVE
-	// ARGV[4] := 0=QUIET, 1=VERBOSE
+	// REQUIRED ARGUMENTS
+	// argv[0] := PATH TO THIS SOLVER EXECUTABLE
+	// argv[1] := INPUT DIRECTORY
+	// argv[2] := OUTPUT DIRECTORY
 
-	// assume quiet mode, turn on verbose if desired
-	std::cout.setstate( std::ios_base::badbit ) ;
-	if( argc > 4 ) {
-		if( argv[4][0] != '0' ) {
-			std::cout.clear() ;
+	// DEFAULT PARAMETERS
+	bool verbose = false ;
+
+	// OPTIONAL ARGUMENTS (DEFAULT)
+	// -v --verbose := (0)=quiet, 1=verbose
+	if( (argc<2) || (argc%2!=1) ) {
+		std::cout << "ERROR: Incorrect number of parameter-value pairs in argument list.  Exiting." << std::endl ;
+		return -1 ;
+	}
+	std::string arg ;
+	std::string val ;
+	for( int i = 3 ; i < argc ; i+=2 ) {
+		arg = argv[i  ] ;
+		val = argv[i+1] ;
+		if( (arg=="-v") || (arg=="--verbose") ) {
+			verbose = std::stoi(val) != 0 ;
 		}
 	}
 
-	// number of intermediate iterations to save
-	std::size_t num_iter_save = 0 ;
-	if( argc > 3 ) {
-		num_iter_save = static_cast<std::size_t>( std::atoi(argv[3]) ) ;
+	// if quiet mode, silence the standard output
+	if( !verbose ) {
+		std::cout.setstate( std::ios_base::badbit ) ;
+	} else {
+		std::cout.clear() ;
 	}
 
 	/*
@@ -84,7 +95,6 @@ int main( int argc , const char * argv[] ) {
 	spring_network->setup( network_parameters ) ;
 	
 	std::cout << "\n3.  Solve" << std::endl ;
-	spring_network->num_iter_save = num_iter_save ;
 	spring_network->solve() ;
 	
 	std::cout << "\n4.  Complete" << std::endl ;

@@ -29,8 +29,16 @@ class SpringNetwork:
 		self.nodes = []
 		self.springs = []
 		self.boundaries = []
+		#
 		self.dir_solver_input = None
 		self.dir_solver_output = None
+		self.solver_algorithm = 'newton'
+		self.solver_num_iter_save = 0
+		self.solver_num_iter_print = 0
+		self.solver_num_iter_max = 0
+		self.solver_tolerance_change_energy = 1.0e-12
+		self.solver_tolerance_sum_net_force = 1.0e-12
+		#
 
 	def setup(self, nodes=None, springs=None, boundaries=None):
 		if nodes is not None:
@@ -53,10 +61,13 @@ class SpringNetwork:
 	def run_spring_solver(self, dir_input=None, dir_output=None):
 		if dir_input is None:
 			dir_input = self.dir_solver_input
+		if dir_output is None:
+			dir_output = self.dir_solver_output
+		if not dir_output.exists():
+			dir_output.mkdir(parents=True)
 		exe_springs_solver = Path('.') / 'springs_solver' / 'springs_solver.exe'
-		sys_command = str(exe_springs_solver) + ' ' + str(dir_input)
-		if dir_output is not None:
-			sys_command += ' ' + str(dir_output)
+		sys_command = str(exe_springs_solver) + ' ' + str(dir_input) + ' ' + str(dir_output)
+		sys_command += ' --verbose 1'
 		os.system(sys_command)
 
 	def write_spring_network(self, dir_input=None, use_solver_format=False):
@@ -68,12 +79,19 @@ class SpringNetwork:
 		write_springs = self.springs if not use_solver_format else [ spring for spring in self.springs if not spring.broken ]
 		file_name = dir_input / 'network_parameters.txt'
 		with open(file_name,'wt') as file:
-			file.write('{:d}\n'.format(len(write_nodes)))
-			file.write('{:d}\n'.format(len(write_springs)))
-			file.write('{:s}\n'.format(self.precision))
-			file.write('{:d}\n'.format(self.num_dimensions))
-			file.write('{:d}\n'.format(self.num_stiffness_tension))
-			file.write('{:d}\n'.format(self.num_stiffness_compression))
+			file.write(               'num_points {:d}\n'.format(len(write_nodes)))
+			file.write(              'num_springs {:d}\n'.format(len(write_springs)))
+			file.write(                'precision {:s}\n'.format(self.precision))
+			file.write(           'num_dimensions {:d}\n'.format(self.num_dimensions))
+			file.write(    'num_stiffness_tension {:d}\n'.format(self.num_stiffness_tension))
+			file.write('num_stiffness_compression {:d}\n'.format(self.num_stiffness_compression))
+			file.write(                'algorithm {:s}\n'.format(self.solver_algorithm))
+			file.write(            'num_iter_save {:d}\n'.format(self.solver_num_iter_save))
+			file.write(           'num_iter_print {:d}\n'.format(self.solver_num_iter_print))
+			file.write(             'num_iter_max {:d}\n'.format(self.solver_num_iter_max))
+			file.write(  'tolerance_change_energy {:f}\n'.format(self.solver_tolerance_change_energy))
+			file.write(  'tolerance_sum_net_force {:f}\n'.format(self.solver_tolerance_sum_net_force))
+
 		file_name = dir_input / 'network_nodes.dat'
 		file_format = Node.get_file_format(
 			self.num_dimensions,
@@ -96,15 +114,22 @@ class SpringNetwork:
 	def read_spring_network(self, dir_output=None, use_solver_format=False, reinitialize=False):
 		if dir_output is None:
 			dir_output = self.dir_solver_output
-		file_name = dir_output / 'network_parameters.txt'
 		if reinitialize:
+			file_name = dir_output / 'network_parameters.txt'
 			with open(file_name,'rt') as file:
-				self.num_nodes                 = int(file.readline())
-				self.num_springs               = int(file.readline())
-				self.precision                 = file.readline().rstrip('\n')
-				self.num_dimensions            = int(file.readline())
-				self.num_stiffness_tension     = int(file.readline())
-				self.num_stiffness_compression = int(file.readline())
+				arg = file.readline().rstrip('\n').split()
+				if   arg[0]=="num_nodes"                : self.num_nodes                      =   int(arg[1])
+				elif arg[0]=="num_springs"              : self.num_springs                    =   int(arg[1])
+				elif arg[0]=="precision"                : self.precision                      =       arg[1]
+				elif arg[0]=="num_dimensions"           : self.num_dimensions                 =   int(arg[1])
+				elif arg[0]=="num_stiffness_tension"    : self.num_stiffness_tension          =   int(arg[1])
+				elif arg[0]=="num_stiffness_compression": self.num_stiffness_compression      =   int(arg[1])
+				elif arg[0]=="algorithm"                : self.solver_algorithm               =       arg[1]
+				elif arg[0]=="num_iter_save"            : self.solver_num_iter_save           =   int(arg[1])
+				elif arg[0]=="num_iter_print"           : self.solver_num_iter_print          =   int(arg[1])
+				elif arg[0]=="num_iter_max"             : self.solver_num_iter_max            =   int(arg[1])
+				elif arg[0]=="tolerance_change_energy"  : self.solver_tolerance_change_energy = float(arg[1])
+				elif arg[0]=="tolerance_sum_net_force"  : self.solver_tolerance_sum_net_force = float(arg[1])
 			self.nodes   = [ Node(self.num_dimensions) for count in range(self.num_nodes) ]
 			self.springs = [ Spring() for count in range(self.num_springs) ]
 			if not use_solver_format:
@@ -140,6 +165,28 @@ class SpringNetwork:
 		for spring in self.springs:
 			spring.node_start_pointer = self.nodes[spring.node_start]
 			spring.node_end_pointer   = self.nodes[spring.node_end  ]
+		for spring in self.springs:
+			spring.adjacent_nodes_pointers.clear()
+			spring.adjacent_springs_pointers.clear()
+		for node in self.nodes:
+			node.adjacent_nodes_pointers.clear()
+			node.adjacent_springs_pointers.clear()
+		for spring in self.springs:
+			if not spring.broken:
+				spring.node_start_pointer.adjacent_springs_pointers.append( spring )
+				spring.node_start_pointer.adjacent_nodes_pointers.append( spring.node_end_pointer )
+				spring.node_end_pointer.adjacent_springs_pointers.append( spring )
+				spring.node_end_pointer.adjacent_nodes_pointers.append( spring.node_start_pointer )
+		for spring in self.springs:
+			if not spring.broken:
+				for adj_spring in spring.node_start_pointer.adjacent_springs_pointers:
+					if adj_spring is not spring and not adj_spring.broken:
+						adj_spring.adjacent_springs_pointers.append( spring )
+						adj_spring.adjacent_nodes_pointers.append( spring.node_end_pointer )
+				for adj_spring in spring.node_end_pointer.adjacent_springs_pointers:
+					if adj_spring is not spring and not adj_spring.broken:
+						adj_spring.adjacent_springs_pointers.append( spring )
+						adj_spring.adjacent_nodes_pointers.append( spring.node_start_pointer )
 
 	def connect_boundaries_nodes(self):
 		if self.boundaries is not None:
@@ -187,6 +234,7 @@ class SpringNetwork:
 		if hasattr(self.springs[0], break_variable):
 			# now, set all nodes to not referenced
 			# later, set the nodes of non-broken springs to referenced
+			any_new_breaks = False
 			for node in self.nodes:
 				node.referenced = False
 			for spring in self.springs:
@@ -197,3 +245,8 @@ class SpringNetwork:
 					if not spring.broken:
 						spring.node_start_pointer.referenced = True
 						spring.node_end_pointer.referenced = True
+					else:
+						any_new_breaks = True
+			if any_new_breaks:
+				self.connect_springs_nodes()
+

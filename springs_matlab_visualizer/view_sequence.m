@@ -1,5 +1,5 @@
 
-dir_main = fullfile('..','..','TEST_AGENT_04') ;
+dir_main = fullfile('..','..','.') ;
 dir_save_list = dir(fullfile( dir_main , 'STRETCH_*' )) ;
 
 dir_save = fullfile( dir_main , dir_save_list(1).name ) ;

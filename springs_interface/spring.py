@@ -18,6 +18,9 @@ class Spring:
 		self.strain = 0.0
 		self.broken = False
 		self.repairable = True
+		#
+		self.adjacent_nodes_pointers = []
+		self.adjacent_springs_pointers = []
 
 	@staticmethod
 	def get_file_format(precision, num_stiffness_tension, num_stiffness_compression, use_solver_format=False):

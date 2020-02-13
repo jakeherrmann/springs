@@ -53,6 +53,10 @@ def main(argv):
 		return
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+	net.solver_algorithm = 'newton'
+	net.solver_tolerance_change_energy = 1.0E-3
+
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 	using_stretch_profile = False
 	using_forcing_profile = True
 

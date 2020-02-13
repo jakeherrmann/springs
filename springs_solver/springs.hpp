@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "vectors_nd.hpp"
+#include "spmat.hpp"
 
 ///
 void make_dir( const std::string & ) ;
@@ -36,6 +37,14 @@ public:
 	std::size_t num_dimensions = 2 ;
 	std::size_t num_stiffness_tension     = 0 ;
 	std::size_t num_stiffness_compression = 0 ;
+	//
+	std::string algorithm = "newton" ;
+	std::size_t num_iter_save  = 0 ;
+	std::size_t num_iter_print = 0 ;
+	std::size_t num_iter_max   = 0 ;
+	double tolerance_change_energy = 1.0e-12 ;
+	double tolerance_sum_net_force = 1.0e-12 ;
+
 	//
 	NetworkParameters( const std::string & , const std::string & ) ;
 	void load_parameters( const char * ) ;
@@ -88,11 +97,13 @@ template< class T , std::size_t N >
 class SpringNetwork : public ASpringNetwork {
 	// graph data structures
 	struct Link {
+		std::size_t node_index ;
 		Point<T,N> * point ;
 		Spring<T,N> * spring ;
 		T spring_direction ;
 	} ;
 	struct Node {
+		std::size_t node_index ;
 		Point<T,N> * point ;
 		std::vector< Link > links ;
 	} ;
@@ -120,16 +131,33 @@ private:
 	std::vector<  Point<T,N> > points_best ;
 	std::vector< Spring<T,N> > springs ;
 	std::vector<        Node > nodes ;
+	//
 	std::default_random_engine rng ;
 	std::uniform_real_distribution<T> uni_0_1 ;
 	std::uniform_real_distribution<T> uni_1_1 ;
+	//
 	T max_spring_length ;
-	Vector<T,N> scale_min ;
-	Vector<T,N> scale_max ;
-	Vector<T,N> scale_range ;
+	T scale_length    = static_cast<T>(1.0) ;
+	T scale_stiffness = static_cast<T>(1.0) ;
+	T scale_force     = static_cast<T>(1.0) ;
+	Vector<T,N> scale_position_min ;
+	Vector<T,N> scale_position_max ;
+	Vector<T,N> scale_position_range ;
+	//
+	std::string algorithm ;
+	std::size_t num_iter_save ;
+	std::size_t num_iter_print ;
+	std::size_t num_iter_max ;
+	T tolerance_change_energy ;
+	T tolerance_sum_net_force ;
+	T sum_net_force_magnitude ;
+	std::vector<T> neg_gradient ;
+	std::vector<T> step_direction ;
+	spmat<T> hessian ;
 public:
 	//
 	T total_energy( void ) ;
+	void move_points_newton( const T & ) ;
 	void move_points_force( const T & ) ;
 	void move_points_rand( const T & ) ;
 	bool test_reboot( void ) ;
@@ -139,6 +167,10 @@ public:
 	void solve( void ) ;
 	void anneal( void ) ;
 	void minimize_energy( void ) ;
+	void minimize_energy_newton( void ) ;
+	void compute_gradient( void ) ;
+	void compute_hessian( void ) ;
+	void compute_newton_step_direction( void ) ;
 	void save_output( void ) ;
 	// input & output
 	void setup( const NetworkParameters & ) ;
