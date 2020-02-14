@@ -89,9 +89,8 @@ class SpringNetwork:
 			file.write(            'num_iter_save {:d}\n'.format(self.solver_num_iter_save))
 			file.write(           'num_iter_print {:d}\n'.format(self.solver_num_iter_print))
 			file.write(             'num_iter_max {:d}\n'.format(self.solver_num_iter_max))
-			file.write(  'tolerance_change_energy {:f}\n'.format(self.solver_tolerance_change_energy))
-			file.write(  'tolerance_sum_net_force {:f}\n'.format(self.solver_tolerance_sum_net_force))
-
+			file.write(  'tolerance_change_energy {:e}\n'.format(self.solver_tolerance_change_energy))
+			file.write(  'tolerance_sum_net_force {:e}\n'.format(self.solver_tolerance_sum_net_force))
 		file_name = dir_input / 'network_nodes.dat'
 		file_format = Node.get_file_format(
 			self.num_dimensions,
