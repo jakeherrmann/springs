@@ -126,11 +126,18 @@ def main(argv):
 					'{:07.5f} mean average strain energy rate').format(
 					sum(spring_strains_mean)/len(spring_strains_mean),
 					sum(spring_strain_energy_rates)/len(spring_strain_energy_rates)))
+
+			# halt if solver fails
+			if any( [ math.isnan(spring.strain) for spring in lung.net.springs ] ):
+				print( 'FOUND NAN IN SOLUTION' )
+				return
+
 			# assign inputs to fibroblasts
 			for agent in lung.agents:
 				agent.strain = spring_strains_mean[ agent.spring_index ]
 				agent.strain_energy_rate = spring_strain_energy_rates[ agent.spring_index ]
 			lung.agent_actions( time_cycle )
+			lung.net.break_spring('stiffness_tension', 0.0, relop='<=')
 			if (iter_cycle+1) % 5 is 0:
 				spr.display(lung.net,
 					color_variable='stiffness_tension',

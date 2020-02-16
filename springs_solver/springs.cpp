@@ -25,6 +25,12 @@
 
 #include <sys/stat.h>
 
+#ifdef WINDOWS
+	#define FILESEP '\\'
+#else
+	#define FILESEP '/'
+#endif
+
 ///______________________ make_dir ______________________///
 void make_dir( const std::string & dir_name )
 {
@@ -135,6 +141,7 @@ T Spring<T,N>::spring_energy( void )
 	T delta_length = length - rest_length ;
 	T force_magnitude = static_cast<T>(0) ;
 	T energy = static_cast<T>(0) ;
+	effective_stiffness = static_cast<T>(0) ;
 	if( delta_length > 0 ) {
 		T force_component ;
 		T delta_length_power_i = delta_length ;
@@ -144,17 +151,29 @@ T Spring<T,N>::spring_energy( void )
 			energy += force_component * delta_length / static_cast<T>(i+1) ;
 			delta_length_power_i *= delta_length ;
 		}
-	} else if( allow_compression ) {
-		delta_length = std::fabs( delta_length ) ;
-		T force_component ;
-		T delta_length_power_i = delta_length ;
-		for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_compression ; ++i ) {
-			force_component = stiffness_compression[i] * delta_length_power_i ;
-			force_magnitude += force_component ;
-			energy += force_component * delta_length / static_cast<T>(i+1) ;
-			delta_length_power_i *= delta_length ;
+		effective_stiffness = force_magnitude / delta_length ;
+	} else if( delta_length < 0 ) {
+		if( allow_compression ) {
+			delta_length = std::fabs( delta_length ) ;
+			T force_component ;
+			T delta_length_power_i = delta_length ;
+			for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_compression ; ++i ) {
+				force_component = stiffness_compression[i] * delta_length_power_i ;
+				force_magnitude += force_component ;
+				energy += force_component * delta_length / static_cast<T>(i+1) ;
+				delta_length_power_i *= delta_length ;
+			}
+			effective_stiffness = force_magnitude / delta_length ;
+			force_magnitude = -force_magnitude ;
+		} else {
+			effective_stiffness = static_cast<T>(0) ;
 		}
-		force_magnitude = -force_magnitude ;
+	} else {
+		if( Spring<T,N>::num_stiffness_tension > 0 ) {
+			effective_stiffness = stiffness_tension[0] ;
+		} else if( Spring<T,N>::num_stiffness_compression > 0 ) {
+			effective_stiffness = stiffness_compression[0] ;
+		}
 	}
 	force = delta_position ;
 	force *= (force_magnitude/length) ;
@@ -205,7 +224,7 @@ void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters )
 	//
 	dir_input           = network_parameters.dir_input ;
 	dir_output          = network_parameters.dir_output ;
-	dir_output_iter     = dir_output + "iter/" ;
+	dir_output_iter     = dir_output + "iter" + FILESEP ;
 	if( num_iter_save > 0 ) {
 		make_dir( dir_output_iter ) ;
 	}
@@ -565,9 +584,9 @@ void SpringNetwork<T,N>::compute_gradient( void )
 	return ;
 }
 
-///__________________  compute_hessian __________________///
+///_____________  compute_hessian_numerical _____________///
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::compute_hessian( void )
+void SpringNetwork<T,N>::compute_hessian_numerical( void )
 {
 	// evaluate spatial derivatives in nodal forces
 	// using central difference, small step +/- in each direction
@@ -649,20 +668,81 @@ void SpringNetwork<T,N>::compute_hessian( void )
 	return ;
 }
 
+///_____________ compute_hessian_analytical _____________///
+template< class T , std::size_t N >
+void SpringNetwork<T,N>::compute_hessian_analytical( void )
+{
+	//
+	iterNode n ;
+	iterNode n_end ;
+	iterLink l ;
+	iterLink l_end ;
+	std::size_t num_node = nodes.size() ;
+	std::vector<std::size_t> sp_row ;
+	std::vector<std::size_t> sp_col ;
+	std::vector<T> sp_val ;
+	//
+	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
+		// case: different nodes, any directions
+		for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
+			T value_0 = l->spring->rest_length / l->spring->length ;
+			T value_1 = value_0 - static_cast<T>(1.0) ;
+			T value_2 = value_0 / ( l->spring->length * l->spring->length ) ;
+			for( std::size_t d_p = 0 ; d_p < N ; ++d_p ) {
+				for( std::size_t d_f = 0 ; d_f < N ; ++d_f ) {
+					T value_3 = ( n->point->position[d_p] - l->point->position[d_p] ) ;
+					T value_4 = ( n->point->position[d_f] - l->point->position[d_f] ) ;
+					T value_5 = l->spring->effective_stiffness * ( value_1 - (value_2*value_3*value_4) ) ;
+					sp_row.push_back( (n->node_index)*N + d_f ) ;
+					sp_col.push_back( (l->node_index)*N + d_p ) ;
+					sp_val.push_back( value_5 ) ;
+				}
+			}
+		}
+		// case: same node, different directions
+		for( std::size_t d_p = 0 ; d_p < N ; ++d_p ) {
+			for( std::size_t d_f = 0 ; d_f < N ; ++d_f ) {
+				T value_0 = static_cast<T>(0.0) ;
+				for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
+					T value_1 = l->spring->rest_length / l->spring->length ;
+					T value_2 = static_cast<T>(1.0) - value_1 ;
+					T value_3 = value_1 / ( l->spring->length * l->spring->length ) ;
+					T value_4 = ( n->point->position[d_p] - l->point->position[d_p] ) ;
+					T value_5 = ( n->point->position[d_f] - l->point->position[d_f] ) ;
+					value_0 += l->spring->effective_stiffness * ( value_2 + value_3*value_4*value_5 ) ;
+				}
+				sp_row.push_back( (n->node_index)*N + d_f ) ;
+				sp_col.push_back( (n->node_index)*N + d_p ) ;
+				sp_val.push_back( value_0 ) ;
+			}
+		}
+	}
+	hessian = typename spmat<T>::spmat( N*num_node , N*num_node ) ;
+	hessian.set_val( sp_row , sp_col , sp_val ) ;
+	return ;
+}
+
 ///___________  compute_newton_step_direction ___________///
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::compute_newton_step_direction( void )
 {
-	// prepare gradient and hessian
+	// prepare gradient
 	compute_gradient() ;
-	compute_hessian() ;
 	step_direction = neg_gradient ;
+
+	// prepare hessian
+	bool use_numerical_hessian = false ;
+	if( use_numerical_hessian ) {
+		compute_hessian_numerical() ;
+	} else {
+		compute_hessian_analytical() ;
+	}
 
 	// if any zero on the diagonal, remove row and column
 	// set all row and col values 0, set diagonal value 1, set source vector 0
-	T small_number = static_cast<T>(1000) * std::numeric_limits<T>::epsilon() ;
+	T small_number = static_cast<T>(1000.0) * std::numeric_limits<T>::epsilon() ;
 	for( std::size_t r = 0 ; r < hessian.get_numRow() ; ++r ) {
-		if( std::abs(hessian.get_val(r,r)) <= small_number ) {
+		if( std::fabs(hessian.get_val(r,r)) <= small_number ) {
 			for( std::size_t c = 0 ; c < hessian.get_numCol() ; ++c ) {
 				hessian.set_val(r,c,static_cast<T>(0.0)) ;
 				hessian.set_val(c,r,static_cast<T>(0.0)) ;
@@ -828,7 +908,7 @@ void SpringNetwork<T,N>::minimize_energy( void )
 
 	// user-definable parameters with default values specific to this algorithm
 	std::size_t local_num_iter_max   = ( num_iter_max   > 0 ) ? num_iter_max   : 500000 ;
-	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :   5000 ;
+	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :      0 ;
 	std::size_t local_num_iter_print = ( num_iter_print > 0 ) ? num_iter_print :    200 ;
 	T local_tolerance_sum_net_force = ( tolerance_sum_net_force > 0.0 ) ? tolerance_sum_net_force : 1E-12 ;
 	T local_tolerance_change_energy = ( tolerance_change_energy > 0.0 ) ? tolerance_change_energy : 1E-12 ;
@@ -862,7 +942,7 @@ void SpringNetwork<T,N>::minimize_energy( void )
 			++num_iter_zero_change ;
 		}
 
-		if( iter%local_num_iter_print == 0 ) {
+		if( (local_num_iter_print>0) && (iter%local_num_iter_print==0) ) {
 			std::cout
 				<< std::setprecision(3)
 				<< std::scientific
@@ -873,12 +953,23 @@ void SpringNetwork<T,N>::minimize_energy( void )
 				<< std::endl ;
 		}
 
+		if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
+			std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
+			make_dir( dir_output_iter_curr ) ;
+			save_network_binary(
+				(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
+				(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
+		}
+
 		// stopping condition
 		if(    (sum_net_force_magnitude<local_tolerance_sum_net_force)
 			|| (change_energy<local_tolerance_change_energy)
 			|| (step_size<=step_size_min)
 			|| (num_iter_zero_change>num_iter_zero_change_max) )
 		{
+			break ;
+		}
+		if( std::isnan( energy ) ) {
 			break ;
 		}
 	}
@@ -905,7 +996,7 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 
 	// user-definable parameters with default values specific to this algorithm
 	std::size_t local_num_iter_max   = ( num_iter_max   > 0 ) ? num_iter_max   : 500 ;
-	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :  10 ;
+	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :   0 ;
 	std::size_t local_num_iter_print = ( num_iter_print > 0 ) ? num_iter_print :   1 ;
 	T local_tolerance_sum_net_force = ( tolerance_sum_net_force > 0.0 ) ? tolerance_sum_net_force : 1E-12 ;
 	T local_tolerance_change_energy = ( tolerance_change_energy > 0.0 ) ? tolerance_change_energy : 1E-12 ;
@@ -932,7 +1023,7 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 			++num_iter_zero_change ;
 		}
 
-		if( iter%local_num_iter_print == 0 ) {
+		if( (local_num_iter_print>0) && (iter%local_num_iter_print==0) ) {
 			std::cout
 				<< std::setprecision(3)
 				<< std::scientific
@@ -943,12 +1034,23 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 				<< std::endl ;
 		}
 
+		if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
+			std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
+			make_dir( dir_output_iter_curr ) ;
+			save_network_binary(
+				(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
+				(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
+		}
+
 		// stopping condition
 		if(    (sum_net_force_magnitude<local_tolerance_sum_net_force)
 			|| (change_energy<local_tolerance_change_energy)
 			|| (step_size<=step_size_min)
 			|| (num_iter_zero_change>num_iter_zero_change_max) )
 		{
+			break ;
+		}
+		if( std::isnan( energy ) ) {
 			break ;
 		}
 	}
@@ -966,10 +1068,14 @@ void SpringNetwork<T,N>::anneal( void )
 	T energy_init = energy ;
 	T energy_prev = energy ;
 	T energy_best = energy ;
-
-	// count how many intermediate iterations saved
-	std::size_t num_iter_saved = 0 ;
 	
+	// user-definable parameters with default values specific to this algorithm
+	std::size_t local_num_iter_max   = ( num_iter_max   > 0 ) ? num_iter_max   : 500000 ;
+	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :      0 ;
+	std::size_t local_num_iter_print = ( num_iter_print > 0 ) ? num_iter_print :   5000 ;
+	T local_tolerance_sum_net_force = ( tolerance_sum_net_force > 0.0 ) ? tolerance_sum_net_force : 1E-12 ;
+	T local_tolerance_change_energy = ( tolerance_change_energy > 0.0 ) ? tolerance_change_energy : 1E-12 ;
+
 	// annealing solver parameters
 	// TODO // get these parameters from NetworkParameters? (default/file)
 	T step_size = static_cast<T>(0.02) ;
@@ -977,11 +1083,7 @@ void SpringNetwork<T,N>::anneal( void )
 	T energy_compare ;
 	T energy_compare_min = static_cast<T>(1E-12) ;
 	T relative_change_energy ;
-	T relative_change_energy_tol = static_cast<T>(1E-6) ;
-	std::size_t num_iter_max       = 500000 ;
-	std::size_t num_iter_heatup    = num_iter_max /   5 ;
-	std::size_t num_iter_10percent = num_iter_max /  10 ;
-	std::size_t num_iter_01percent = num_iter_max / 100 ;
+	std::size_t num_iter_heatup = local_num_iter_max / 5 ;
 	std::size_t num_consecutive_reject     =  0 ;
 	std::size_t num_consecutive_reject_max = 20 ;
 	std::size_t num_small_change     =  0 ;
@@ -1000,20 +1102,8 @@ void SpringNetwork<T,N>::anneal( void )
 	T temperature = std::fabs( energy_compare - energy_best ) ;
 	
 	// begin annealing
-	for( std::size_t iter = 0 ; iter < num_iter_max ; ++iter ) {
+	for( std::size_t iter = 0 ; iter < local_num_iter_max ; ++iter ) {
 
-		//	print status
-		if( iter%num_iter_01percent == 0 ) {
-			if( iter > 0 ) {
-				std::cout << "." << std::flush ;
-				if( iter%num_iter_10percent == 0 ) {
-					std::cout << 100*iter/num_iter_max << "%\n" << std::flush ;
-				}
-			} else {
-				std::cout << '\n' << std::flush ;
-			}
-		}
-		
 		// randomize the order of nodes?
 		// no need for random ordering if force/energy does not depend on order
 		///std::random_shuffle( nodes.begin() , nodes.end() ) ;
@@ -1021,7 +1111,7 @@ void SpringNetwork<T,N>::anneal( void )
 		// test a new configuration, force-driven or random
 		move_points_force( step_size ) ;
 		//move_points_rand( step_size * 1E-5 ) ;
-		energy = total_energy() ;
+		energy = total_energy() ; // also computes sum_net_force_magnitude
 		
 		// if configuration is too extreme, reset network to best
 		reboot = test_reboot() ;
@@ -1038,16 +1128,7 @@ void SpringNetwork<T,N>::anneal( void )
 		// assume the current state is near local minimum, and
 		// reduce the temperature
 		relative_change_energy = std::fabs( energy - energy_prev ) / energy_compare ;
-		//**
-		if( iter%100 == 0 ) {
-			std::cout
-				<< "\t" << energy
-				<< "\t" << energy_prev
-				<< "\t" << relative_change_energy
-				<< std::endl ;
-		}
-		//*/
-		if( relative_change_energy < relative_change_energy_tol ) {
+		if( relative_change_energy < local_tolerance_change_energy ) {
 			++num_small_change ;
 			if( num_small_change == num_small_change_max ) {
 				temperature *= temperature_reduction ;
@@ -1058,6 +1139,9 @@ void SpringNetwork<T,N>::anneal( void )
 				num_small_change = 0 ;
 			}
 		}
+		if( sum_net_force_magnitude < local_tolerance_sum_net_force ) {
+			break ;
+		}
 
 		//*/
 		if( num_consecutive_reject >= num_consecutive_reject_max ) {
@@ -1065,17 +1149,6 @@ void SpringNetwork<T,N>::anneal( void )
 			step_size *= temperature_reduction ; // TEST REMOVE
 		}
 		//**/
-		
-		if( num_iter_saved < num_iter_save ) {
-			if( ((iter%100)==0) && (iter<=10000) ) {
-				std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + "/" ;
-				make_dir( dir_output_iter_curr ) ;
-				save_network_binary(
-					(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
-					(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
-				++num_iter_saved ;
-			}
-		}
 		
 		// accept or reject new state based on change in energy
 		// accepting decreased energy is guaranteed
@@ -1109,18 +1182,32 @@ void SpringNetwork<T,N>::anneal( void )
 			}
 			energy_best = heat_up( heatup_amplitude , heatup_num_config ) ;
 			iter += heatup_num_config ;
-			if( ((iter-heatup_num_config)%num_iter_01percent) >= (num_iter_01percent-heatup_num_config) ) {
-				if( iter > 0 ) {
-					std::cout << "." << std::flush ;
-					if( ((iter-heatup_num_config)%num_iter_10percent) >= (num_iter_10percent-heatup_num_config) ) {
-						std::cout << 100*iter/num_iter_max << "%\n\t" << std::flush ;
-					}
-				} else {
-					std::cout << "\t" << std::flush ;
-				}
-			}
 			points_prev = points ;
 			energy_prev = energy ;
+		}
+
+		if( (local_num_iter_print>0) && (iter%local_num_iter_print==0) ) {
+			std::cout
+				<< std::setprecision(3)
+				<< std::scientific
+				<< "  " << std::setw(10) << energy_best
+				<< "  " << std::setw(10) << energy
+				<< "  " << std::setw(10) << energy_prev
+				<< "  " << std::setw(10) << energy-energy_prev
+				<< "  " << std::setw(10) << step_size
+				<< std::endl ;
+		}
+		
+		if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
+			std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
+			make_dir( dir_output_iter_curr ) ;
+			save_network_binary(
+				(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
+				(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
+		}
+
+		if( std::isnan( energy ) ) {
+			break ;
 		}
 	}
 	points = points_best ;

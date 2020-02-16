@@ -39,7 +39,6 @@ class Lung:
 		if self.agents is not None:
 			for agent in self.agents:
 				agent.do_actions(time_step)
-			self.net.break_spring('stiffness_tension', 0.0, relop='<=')
 
 	def add_fibroblast_every_spring(self):
 		self.agents = []

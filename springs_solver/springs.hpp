@@ -74,6 +74,7 @@ public:
 	Point<T,N> * end ;
 	std::vector<T> stiffness_tension ;
 	std::vector<T> stiffness_compression ;
+	T effective_stiffness ;
 	T length ;
 	T rest_length ;
 	Vector<T,N> force ;
@@ -169,7 +170,8 @@ public:
 	void minimize_energy( void ) ;
 	void minimize_energy_newton( void ) ;
 	void compute_gradient( void ) ;
-	void compute_hessian( void ) ;
+	void compute_hessian_numerical( void ) ;
+	void compute_hessian_analytical( void ) ;
 	void compute_newton_step_direction( void ) ;
 	void save_output( void ) ;
 	// input & output
