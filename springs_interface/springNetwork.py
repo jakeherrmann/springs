@@ -7,6 +7,8 @@ from .boundary       import Boundary
 from .springFileIO   import FileVariable, FileFormat
 from pathlib import Path
 
+import springs_setup
+
 import operator
 import struct
 import os
@@ -80,6 +82,10 @@ class SpringNetwork:
 		if not dir_output.exists():
 			dir_output.mkdir(parents=True)
 		exe_springs_solver = Path('.') / 'springs_solver' / 'springs_solver.exe'
+		if not exe_springs_solver.exists():
+			print('Could not find compiled solver executable.')
+			print('Attempting to compile now.')
+			springs_setup.main('')
 		sys_command = str(exe_springs_solver) + ' ' + str(dir_input) + ' ' + str(dir_output)
 		sys_command += ' --verbose 1'
 		os.system(sys_command)
