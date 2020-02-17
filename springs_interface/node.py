@@ -8,8 +8,9 @@ class Node:
 		self.fixed      = False
 		self.referenced = True
 		#
-		self.adjacent_nodes_pointers = []
-		self.adjacent_springs_pointers = []
+		self.adjacent_nodes = []
+		self.adjacent_springs = []
+		self.structures = []
 
 	@staticmethod
 	def get_file_format(num_dimensions, precision, use_solver_format=False):

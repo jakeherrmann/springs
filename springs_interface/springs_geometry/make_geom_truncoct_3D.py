@@ -1,13 +1,14 @@
-from ..node          import Node
-from ..spring        import Spring
-from ..boundary      import Boundary
-from ..structure     import Structure
-from ..springNetwork import SpringNetwork
+from ..node           import Node
+from ..spring         import Spring
+from ..boundary       import Boundary
+from ..structure      import Structure
+from ..structureGroup import StructureGroup
+from ..springNetwork  import SpringNetwork
 import math
 import numpy as np
 import scipy.spatial
 
-def make_geom_truncoct_3D(geom_size=[5,3,4]):
+def make_geom_truncoct_3D(geom_size=[5,3,4], split_walls_into_triangles=False):
 	num_row = geom_size[1] + 3
 	num_col = geom_size[0] + 3
 	num_lay = geom_size[2] + 3
@@ -64,35 +65,53 @@ def make_geom_truncoct_3D(geom_size=[5,3,4]):
 	springs_nodes = springs_nodes.tolist()
 	walls_springs = [ [ unique_ind[wsi] for wsi in ws ] for ws in walls_springs ]
 
-	# TODO: for each wall, optionally add a central node and springs connecting to all other nodes
-	tri_walls_nodes = []
-	tri_walls_springs = []
-	for wn, ws in zip(walls_nodes, walls_springs):
-		centroid = np.mean( nodes_position[wn,:] ,axis=0)
-		new_node = len(nodes)
-		new_springs_nodes = [ [wni, new_node] for wni in wn ]
-		new_springs = [ len(springs_nodes)+i for i in range(len(new_springs_nodes)) ]
-		new_tri_nodes = [ [wn[i-1],wn[i],new_node] for i in range(len(wn)) ]
-		new_tri_springs = [ [ws[i],new_springs[i-1],new_springs[i]] for i in range(len(ws)) ]
-		tri_walls_nodes.extend( new_tri_nodes )
-		tri_walls_springs.extend( new_tri_springs )
-		wn.append( new_node )
-		ws.extend( new_springs )
-		springs_nodes.extend( new_springs_nodes )
-		nodes.append( Node(num_dimensions=3) )
-		nodes[new_node].position = centroid.tolist()
-	walls_nodes   = tri_walls_nodes
-	walls_springs = tri_walls_springs
+	# identify groups of walls that form enclosed regions
+	regions_walls = [ [] for r in vor.regions ]
+	regions_nodes_indexes = [ [ nodes_ind.index(ri) for ri in r if ri in nodes_ind ] for r in vor.regions ]
+	for wall_index, wall_nodes in enumerate(walls_nodes):
+		for region_index, region_nodes_indexes in enumerate(regions_nodes_indexes):
+			if all( n in region_nodes_indexes for n in wall_nodes ):
+				regions_walls[region_index].append( wall_index )
+
+	if split_walls_into_triangles:
+		# for each wall, optionally add a central node and springs connecting to all other nodes
+		tri_regions_walls = [ [] for r in vor.regions ]
+		tri_walls_nodes = []
+		tri_walls_springs = []
+		for wi, (wn, ws) in enumerate(zip(walls_nodes, walls_springs)):
+			centroid = np.mean( nodes_position[wn,:] ,axis=0)
+			new_node = len(nodes)
+			new_springs_nodes = [ [wni, new_node] for wni in wn ]
+			new_springs = [ len(springs_nodes)+i for i in range(len(new_springs_nodes)) ]
+			new_tri_nodes = [ [wn[i-1],wn[i],new_node] for i in range(len(wn)) ]
+			new_tri_springs = [ [ws[i],new_springs[i-1],new_springs[i]] for i in range(len(ws)) ]
+			new_tri_walls = range(len(tri_walls_nodes), len(tri_walls_nodes)+len(new_tri_nodes)-1)
+			for region, tri_region in zip(regions_walls, tri_regions_walls):
+				if wi in region:
+					tri_region.extend( new_tri_walls )
+			tri_walls_nodes.extend( new_tri_nodes )
+			tri_walls_springs.extend( new_tri_springs )
+			wn.append( new_node )
+			ws.extend( new_springs )
+			springs_nodes.extend( new_springs_nodes )
+			nodes.append( Node(num_dimensions=3) )
+			nodes[new_node].position = centroid.tolist()
+		regions_walls = tri_regions_walls
+		walls_nodes   = tri_walls_nodes
+		walls_springs = tri_walls_springs
 
 	# construct springs
-	springs = [ Spring(node_start=sn[0], node_end=sn[1]) for sn in springs_nodes ]
+	springs = [ Spring(node_start_index=sn[0], node_end_index=sn[1]) for sn in springs_nodes ]
 	for spring in springs:
-		p_end   = np.asarray(nodes[spring.node_end  ].position)
-		p_start = np.asarray(nodes[spring.node_start].position)
+		p_end   = np.asarray(nodes[spring.node_end_index  ].position)
+		p_start = np.asarray(nodes[spring.node_start_index].position)
 		spring.rest_length = np.linalg.norm( p_end - p_start )
 
 	# construct wall structures
-	walls = [ Structure(nodes=wn, springs=ws) for wn, ws in zip(walls_nodes, walls_springs) ]
+	structures = [ Structure(nodes_indexes=wn, springs_indexes=ws) for wn, ws in zip(walls_nodes, walls_springs) ]
+
+	# construct regions enclosed by wall structures
+	structure_groups = [ StructureGroup(structures_indexes=rw) for rw in regions_walls if len(rw) > 1 ]
 
 	# identify pairs of internal nodes and corresponding external boundary nodes
 	b = [ [ bij for bij in bi if any([ bijk in nodes_ind for bijk in bij ]) ] for bi in b ]
@@ -119,17 +138,22 @@ def make_geom_truncoct_3D(geom_size=[5,3,4]):
 	boundaries[5].outward_direction = [ 0.0, 0.0,+1.0]
 	for boundary, Bi in zip(boundaries, B):
 		B_nodes_ind = [ nodes_ind.index(Bij[0]) for Bij in Bi ] ;
-		boundary.nodes = list(set(B_nodes_ind))
+		boundary.nodes_indexes = list(set(B_nodes_ind))
 		start = [ Bij[0] for Bij in Bi ]
 		end   = [ Bij[1] for Bij in Bi ]
 		Bv = v[end,:] - v[start,:]
 		Bv /= np.linalg.norm(Bv, axis=1, keepdims=True)
 		nodes_force = np.zeros((len(nodes), 3), dtype=float)
 		np.add.at( nodes_force , B_nodes_ind , Bv )
-		boundary.force_directions = nodes_force[boundary.nodes,:].tolist()
+		boundary.force_directions = nodes_force[boundary.nodes_indexes,:].tolist()
 
 	#
 	net = SpringNetwork(num_dimensions=3)
-	net.setup(nodes, springs, boundaries)
+	net.setup(
+		nodes=nodes,
+		springs=springs,
+		structures=structures,
+		structure_groups=structure_groups,
+		boundaries=boundaries)
 
-	return net, walls
+	return net

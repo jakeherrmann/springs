@@ -1,6 +1,7 @@
 import sys
 import random
 import math
+import statistics
 from pathlib import Path
 import springs_interface as spr 
 import springs_biology as bio
@@ -11,7 +12,7 @@ def main(argv):
 	setup_type = 'hexagon_2D'
 
 	if setup_type=='hexagon_2D':
-		net, walls = spr.make_geom_hexagon_2D([28,24])
+		net = spr.make_geom_hexagon_2D([28,24])
 		net.precision = 'float'
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
 		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
@@ -26,11 +27,11 @@ def main(argv):
 		# add some heterogeneity
 		for spring in net.springs:
 			spring.rest_length *= max(0.1, random.gauss(1.0,0.2))
-			k_mod = max(0.1, random.gauss(2.0,1.0))
+			k_mod = max(0.1, random.gauss(1.0,0.2))
 			spring.stiffness_tension = [ k*k_mod for k in spring.stiffness_tension ]
 
 	elif setup_type=='truncoct_3D':
-		net, walls = spr.make_geom_truncoct_3D([2,2,2])
+		net = spr.make_geom_truncoct_3D([2,2,2], split_walls_into_triangles=True)
 		net.precision = 'float'
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
 		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
@@ -40,13 +41,17 @@ def main(argv):
 		net.boundaries[3].force_magnitudes = [+0.03] * len(net.boundaries[3].nodes)
 		net.boundaries[4].force_magnitudes = [+0.03] * len(net.boundaries[4].nodes)
 		net.boundaries[5].force_magnitudes = [+0.03] * len(net.boundaries[5].nodes)
+		# add some heterogeneity
+		for spring in net.springs:
+			spring.rest_length *= max(0.1, random.gauss(1.0,0.2))
+			k_mod = max(0.1, random.gauss(1.0,0.2))
+			spring.stiffness_tension = [ k*k_mod for k in spring.stiffness_tension ]
 
 	elif setup_type=='file':
 		net = spr.SpringNetwork()
 		net.read_spring_network(Path('.')/'..'/'TEST', reinitialize=True)
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
 		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
-		walls = None
 
 	else:
 		print( 'UKNOWN SETUP' )
@@ -64,14 +69,24 @@ def main(argv):
 	if using_forcing_profile:
 		lung = bio.Lung(
 			spring_network=net,
-			walls=walls,
 			spring_break_variable=None,
 			spring_break_threshold=4.0)
 		ax_lims = (
 			(42.5*(1.0-1.8)/2.0,42.5*(1.0+1.8)/2.0),
 			(42.5*(1.0-1.8)/2.0,42.5*(1.0+1.8)/2.0))
 
-		lung.add_fibroblast_every_spring()
+		# note, this adds a fibroblast to every WALL, i.e., both sides of the same septal wall, i.e., two fibroblasts for each structure.
+		lung.add_fibroblast_every_wall()
+
+		# for each wall, add opposite side of the septal wall to adjacent_walls
+		# this allows agents to move through walls
+		for wall in lung.walls:
+			for other_wall in lung.walls:
+				if wall is not other_wall:
+					if wall.structure is other_wall.structure:
+						if wall not in other_wall.adjacent_walls:
+							other_wall.adjacent_walls.append( wall )
+		
 		force_min = 0.425 ; force_max = 0.475
 		time_cycle = 5.0
 		num_forces = 2
@@ -80,7 +95,7 @@ def main(argv):
 		for b in net.boundaries:
 			b.force_magnitudes = [force_min] * len(b.nodes)
 		lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-		spr.display(lung.net,
+		bio.display(lung,
 			color_variable='stiffness_tension',
 			color_range=(-0.05,20.0),
 			ax_lims=ax_lims,
@@ -134,12 +149,12 @@ def main(argv):
 
 			# assign inputs to fibroblasts
 			for agent in lung.agents:
-				agent.strain = spring_strains_mean[ agent.spring_index ]
-				agent.strain_energy_rate = spring_strain_energy_rates[ agent.spring_index ]
+				agent.strain = statistics.mean( [ spring_strains_mean[si] for si in agent.wall.structure.springs_indexes ] )
+				agent.strain_energy_rate = statistics.mean( [ spring_strain_energy_rates[si] for si in agent.wall.structure.springs_indexes ] )
 			lung.agent_actions( time_cycle )
 			lung.net.break_spring('stiffness_tension', 0.0, relop='<=')
 			if (iter_cycle+1) % 5 is 0:
-				spr.display(lung.net,
+				bio.display(lung,
 					color_variable='stiffness_tension',
 					color_range=(-0.05,20.0),
 					ax_lims=ax_lims,
@@ -152,7 +167,6 @@ def main(argv):
 	if using_stretch_profile:
 		lung = bio.Lung(
 			spring_network=net,
-			walls=walls,
 			spring_break_variable=None,
 			spring_break_threshold=4.0)
 		lung.add_fibroblast_every_spring()

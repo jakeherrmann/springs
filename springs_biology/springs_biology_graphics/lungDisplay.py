@@ -3,19 +3,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.collections as mplcol
 
+import scipy.spatial
+
 import matplotlib.colors as mplc
 import mpl_toolkits.mplot3d as mpl3d
 
-def display(net, show_slice=False, **kwargs):
-	if net.num_dimensions==2:
-		display_2D(net, **kwargs)
-	elif net.num_dimensions==3:
+def display(lung, show_slice=False, **kwargs):
+	if lung.net.num_dimensions==2:
+		display_2D(lung, **kwargs)
+	elif lung.net.num_dimensions==3:
 		if show_slice:
-			display_3D_slice(net, **kwargs)
+			display_3D_slice(lung, **kwargs)
 		else:
-			display_3D(net, **kwargs)
+			display_3D(lung, **kwargs)
 
-def display_2D(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True):
+def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True):
+	spring_network = lung.net
 	cmap = plt.get_cmap('inferno')
 	if color_variable is None:
 		c = [(0.0,0.0,0.0)] * len(spring_network.springs)
@@ -55,6 +58,24 @@ def display_2D(spring_network, color_variable=None, color_range=None, ax_lims=No
 		ax.set_xlim(ax_lims[0][0], ax_lims[0][1])
 		ax.set_ylim(ax_lims[1][0], ax_lims[1][1])
 	ax.add_collection( mplcol.LineCollection(segments, colors=colors) )
+
+	# alv_centroids = np.array([ np.mean( np.array( [ n.position for w in a.walls for n in w.structure.nodes ] ) ,axis=0) for a in lung.alveoli ])
+	# plt.scatter(
+	# 	alv_centroids[:,0],
+	# 	alv_centroids[:,1],
+	# 	marker='o',
+	# 	edgecolor=(0.0,0.0,0.0),
+	# 	facecolor='None')
+
+	if lung.agents:
+		agent_positions = np.array( [ np.mean( np.array( [ n.position for n in a.wall.structure.nodes ] ) ,axis=0) for a in lung.agents ] )
+		plt.scatter(
+			agent_positions[:,0],
+			agent_positions[:,1],
+			marker='o',
+			edgecolor=(0.0,0.0,0.0),
+			facecolor=(0.0,0.0,0.0))
+	
 	if save_file_name is not None:
 		plt.savefig(save_file_name)
 	if not show:
@@ -66,7 +87,8 @@ def display_2D(spring_network, color_variable=None, color_range=None, ax_lims=No
 			plt.draw()
 			plt.pause(delay)
 
-def display_3D_slice(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True, structures=None):
+def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True, structures=None):
+	spring_network = lung.net
 	plane_point  = np.array([2.0, 2.0, 5.0])
 	plane_normal = np.array([0.0, 0.0, 1.0])
 	plane_basis  = [
@@ -146,7 +168,8 @@ def display_3D_slice(spring_network, color_variable=None, color_range=None, ax_l
 			plt.draw()
 			plt.pause(delay)
 
-def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=False, show=True, structures=None):
+def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=False, show=True, structures=None):
+	spring_network = lung.net
 	xyz_segments = [
 		np.stack([
 			np.asarray(spring.node_start.position),
@@ -217,7 +240,10 @@ def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=No
 			c = [(0.0,0.0,0.0)] * len(spring_network.springs)
 		else:
 			if hasattr(spring_network.springs[0], color_variable):
-				v = [ getattr(spring, color_variable) for spring in spring_network.springs ]
+				if isinstance(getattr(spring_network.springs[0],color_variable), list):
+					v = [ getattr(spring,color_variable)[0] for spring in spring_network.springs ]
+				else:
+					v = [ getattr(spring,color_variable) for spring in spring_network.springs ]
 			else:
 				v = [0.0] * len(spring_network.springs)
 			if color_range is None:
@@ -231,6 +257,26 @@ def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=No
 		ax.add_collection3d(mpl3d.art3d.Line3DCollection(
 			xyz_segments,
 			color=c))
+
+	# alv_centroids = np.array([ np.mean( np.array( [ n.position for w in a.walls for n in w.structure.nodes ] ) ,axis=0) for a in lung.alveoli ])
+	# alv_centroids = np.array([ ac for ac in alv_centroids if not np.any(np.isnan(ac)) ])
+	# ax.scatter(
+	# 	alv_centroids[:,0],
+	# 	alv_centroids[:,1],
+	# 	alv_centroids[:,2],
+	# 	marker='o',
+	# 	edgecolor=(0.0,0.0,0.0),
+	# 	facecolor='None')
+
+	if lung.agents:
+		agent_positions = np.array( [ np.mean( np.array( [ n.position for n in a.wall.structure.nodes ] ) ,axis=0) for a in lung.agents ] )
+		ax.scatter(
+			agent_positions[:,0],
+			agent_positions[:,1],
+			agent_positions[:,2],
+			marker='o',
+			edgecolor=(0.0,0.0,0.0),
+			facecolor=(0.0,0.0,0.0))
 
 	if save_file_name is not None:
 		plt.savefig(save_file_name)

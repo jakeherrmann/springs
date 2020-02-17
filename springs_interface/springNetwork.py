@@ -1,8 +1,10 @@
 
-from .node      import Node
-from .spring    import Spring
-from .boundary  import Boundary
-from .springFileIO import FileVariable, FileFormat
+from .node           import Node
+from .spring         import Spring
+from .structure      import Structure
+from .structureGroup import StructureGroup
+from .boundary       import Boundary
+from .springFileIO   import FileVariable, FileFormat
 from pathlib import Path
 
 import operator
@@ -21,6 +23,8 @@ class SpringNetwork:
 	def __init__(self, num_dimensions=2, precision='float'):
 		self.num_nodes = 0
 		self.num_springs = 0
+		self.num_structures = 0
+		self.num_structure_groups = 0
 		self.num_boundaries = 0
 		self.num_dimensions = num_dimensions
 		self.precision = precision
@@ -28,6 +32,8 @@ class SpringNetwork:
 		self.num_stiffness_compression = 0
 		self.nodes = []
 		self.springs = []
+		self.structures = []
+		self.structure_groups = []
 		self.boundaries = []
 		#
 		self.dir_solver_input = None
@@ -40,7 +46,7 @@ class SpringNetwork:
 		self.solver_tolerance_sum_net_force = 1.0e-12
 		#
 
-	def setup(self, nodes=None, springs=None, boundaries=None):
+	def setup(self, nodes=None, springs=None, structures=None, structure_groups=None, boundaries=None):
 		if nodes is not None:
 			self.nodes = nodes
 			self.num_nodes = len(nodes)
@@ -48,6 +54,14 @@ class SpringNetwork:
 			self.springs = springs
 			self.num_springs = len(springs)
 			self.connect_springs_nodes()
+		if structures is not None:
+			self.structures = structures
+			self.num_structures = len(structures)
+			self.connect_structures_nodes_springs()
+		if structure_groups is not None:
+			self.structure_groups = structure_groups
+			self.num_structure_groups = len(structure_groups)
+			self.connect_structure_groups_structures()
 		if boundaries is not None:
 			self.boundaries = boundaries
 			self.num_boundaries = len(boundaries)
@@ -105,6 +119,12 @@ class SpringNetwork:
 			use_solver_format=use_solver_format)
 		file_format.write_binary_file(file_name, write_springs)
 		if not use_solver_format:
+			file_name = dir_input / 'network_structures.dat'
+			file_format = Structure.get_file_format()
+			file_format.write_binary_file(file_name, self.structures)
+			file_name = dir_input / 'network_structure_groups.dat'
+			file_format = StructureGroup.get_file_format()
+			file_format.write_binary_file(file_name, self.structure_groups)
 			file_name = dir_input / 'network_boundaries.dat'
 			file_format = Boundary.get_file_format(
 				self.num_dimensions)
@@ -149,6 +169,12 @@ class SpringNetwork:
 			use_solver_format=use_solver_format)
 		file_format.read_binary_file(file_name, read_springs)
 		if not use_solver_format:
+			file_name = dir_input / 'network_structures.dat'
+			file_format = Structure.get_file_format()
+			file_format.read_binary_file(file_name, self.structures)
+			file_name = dir_input / 'network_structure_groups.dat'
+			file_format = StructureGroup.get_file_format()
+			file_format.read_binary_file(file_name, self.structure_groups)
 			file_name = dir_output / 'network_boundaries.dat'
 			file_format = Boundary.get_file_format(
 				self.num_dimensions)
@@ -158,39 +184,67 @@ class SpringNetwork:
 				b.displacements    = [ b.displacements   [i:i+self.num_dimensions] for i in range(0, len(b.displacements   ), self.num_dimensions) ]
 		if reinitialize:
 			self.connect_springs_nodes()
+			self.connect_structures_nodes_springs()
+			self.connect_structure_groups_structures()
 			self.connect_boundaries_nodes()
 
 	def connect_springs_nodes(self):
 		for spring in self.springs:
-			spring.node_start_pointer = self.nodes[spring.node_start]
-			spring.node_end_pointer   = self.nodes[spring.node_end  ]
+			spring.node_start = self.nodes[spring.node_start_index]
+			spring.node_end   = self.nodes[spring.node_end_index  ]
 		for spring in self.springs:
-			spring.adjacent_nodes_pointers.clear()
-			spring.adjacent_springs_pointers.clear()
+			spring.adjacent_nodes.clear()
+			spring.adjacent_springs.clear()
 		for node in self.nodes:
-			node.adjacent_nodes_pointers.clear()
-			node.adjacent_springs_pointers.clear()
+			node.adjacent_nodes.clear()
+			node.adjacent_springs.clear()
 		for spring in self.springs:
 			if not spring.broken:
-				spring.node_start_pointer.adjacent_springs_pointers.append( spring )
-				spring.node_start_pointer.adjacent_nodes_pointers.append( spring.node_end_pointer )
-				spring.node_end_pointer.adjacent_springs_pointers.append( spring )
-				spring.node_end_pointer.adjacent_nodes_pointers.append( spring.node_start_pointer )
+				spring.node_start.adjacent_springs.append( spring )
+				spring.node_start.adjacent_nodes.append( spring.node_end )
+				spring.node_end.adjacent_springs.append( spring )
+				spring.node_end.adjacent_nodes.append( spring.node_start )
 		for spring in self.springs:
 			if not spring.broken:
-				for adj_spring in spring.node_start_pointer.adjacent_springs_pointers:
+				for adj_spring in spring.node_start.adjacent_springs:
 					if adj_spring is not spring and not adj_spring.broken:
-						adj_spring.adjacent_springs_pointers.append( spring )
-						adj_spring.adjacent_nodes_pointers.append( spring.node_end_pointer )
-				for adj_spring in spring.node_end_pointer.adjacent_springs_pointers:
+						adj_spring.adjacent_springs.append( spring )
+						adj_spring.adjacent_nodes.append( spring.node_end )
+				for adj_spring in spring.node_end.adjacent_springs:
 					if adj_spring is not spring and not adj_spring.broken:
-						adj_spring.adjacent_springs_pointers.append( spring )
-						adj_spring.adjacent_nodes_pointers.append( spring.node_start_pointer )
+						adj_spring.adjacent_springs.append( spring )
+						adj_spring.adjacent_nodes.append( spring.node_start )
+
+	def connect_structures_nodes_springs(self):
+		for structure in self.structures:
+			structure.nodes   = [ self.nodes[n]   for n in structure.nodes_indexes   ]
+			structure.springs = [ self.springs[s] for s in structure.springs_indexes ]
+		for node in self.nodes:
+			node.structures.clear()
+		for spring in self.springs:
+			spring.structures.clear()
+		for structure in self.structures:
+			for node in structure.nodes:
+				node.structures.append( structure )
+			for spring in structure.springs:
+				spring.structures.append( structure )
+		for structure in self.structures:
+			structure.adjacent_structures.clear()
+		for structure in self.structures:
+			for spring in structure.springs:
+				for adj_structure in spring.structures:
+					if adj_structure is not structure:
+						structure.adjacent_structures.append( adj_structure )
+
+	def connect_structure_groups_structures(self):
+		if self.structure_groups is not None:
+			for structure_group in self.structure_groups:
+				structure_group.structures = [ self.structures[s] for s in structure_group.structures_indexes ]
 
 	def connect_boundaries_nodes(self):
 		if self.boundaries is not None:
 			for boundary in self.boundaries:
-				boundary.nodes_pointer = [ self.nodes[n] for n in boundary.nodes ]
+				boundary.nodes = [ self.nodes[n] for n in boundary.nodes_indexes ]
 
 	def reset_boundary_conditions(self, which_conditions='all'):
 		if self.boundaries is not None:
@@ -217,7 +271,7 @@ class SpringNetwork:
 					boundary_indexes = range(len(self.boundaries))
 				for bi in boundary_indexes:
 					boundary = self.boundaries[bi]
-					for n in boundary.nodes_pointer:
+					for n in boundary.nodes:
 						boundary.displacements.append( [ (stretch-1.0)*x if d in dimensions else 0.0 for d, x in enumerate(n.position) ] )
 		self.apply_boundary_conditions()
 
@@ -242,8 +296,8 @@ class SpringNetwork:
 					value = value[0] if isinstance(value, list) else value
 					spring.broken = SpringNetwork.relops[relop](value, threshold)
 					if not spring.broken:
-						spring.node_start_pointer.referenced = True
-						spring.node_end_pointer.referenced = True
+						spring.node_start.referenced = True
+						spring.node_end.referenced = True
 					else:
 						any_new_breaks = True
 			if any_new_breaks:

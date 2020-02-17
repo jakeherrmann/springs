@@ -1,32 +1,31 @@
 from .agent_fibroblast import Agent_Fibroblast
+from .wall import Wall
+from .alveolus import Alveolus
 
 import springs_interface as spr
+import numpy as np
+import scipy.spatial
 
 class Lung:
 	def __init__(self,
 			spring_network=None,
-			walls=None,
 			agents=None,
 			spring_break_variable=None,
 			spring_break_threshold=0.0):
 		self.net = spring_network
-		self.walls = walls
-		self.agents = agents
+		self.agents = agents if agents is not None else []
 		self.spring_break_variable  = spring_break_variable
 		self.spring_break_threshold = spring_break_threshold
-		self.alveoli = None
+		#
+		self.alveoli = []
+		self.walls = []
+		self.build_lung_structure()
 
 	def save(self, save_dir):
 		self.net.write_spring_network(save_dir)
-		file_name = save_dir/'lung_walls.dat'
-		file_format = spr.Structure.get_file_format()
-		file_format.write_binary_file(file_name, self.walls)
 
 	def load(self, load_dir):
 		self.net.read_spring_network(load_dir)
-		file_name = load_dir/'lung_walls.dat'
-		file_format = spr.Structure.get_file_format()
-		file_format.read_binary_file(file_name, self.walls)
 
 	def stretch(self, stretch_increment, dimensions='all', boundary_indexes='all'):
 		self.net.apply_stretch(stretch_increment, dimensions=dimensions, boundary_indexes=boundary_indexes)
@@ -36,12 +35,33 @@ class Lung:
 			self.net.break_spring(self.spring_break_variable, self.spring_break_threshold)
 
 	def agent_actions(self, time_step):
-		if self.agents is not None:
-			for agent in self.agents:
-				agent.do_actions(time_step)
+		for agent in self.agents:
+			agent.do_actions(time_step)
 
-	def add_fibroblast_every_spring(self):
-		self.agents = []
-		for spring_index, spring in enumerate(self.net.springs):
-			self.agents.append( Agent_Fibroblast(spring_index=spring_index, spring=spring) )
+	def add_fibroblast_every_wall(self):
+		for wall in self.walls:
+			self.agents.append( Agent_Fibroblast(parent=self, wall=wall) )
+
+	def build_lung_structure(self):
+		# identify alveoli and 2-sided walls from structures and structure_groups
+		self.alveoli = [ Alveolus() for sg in self.net.structure_groups ]
+		self.walls.clear()
+		for structure_group, alveolus in zip(self.net.structure_groups, self.alveoli):
+			for structure in structure_group.structures:
+				self.walls.append( Wall(structure=structure, alveolus=alveolus) )
+				alveolus.walls.append( self.walls[-1] )
+		for wall_index, wall in enumerate(self.walls):
+			wall.index = wall_index
+		# construct adjacency of walls within each alveolus
+		for wall in self.walls:
+			wall.adjacent_walls.clear()
+		for wall in self.walls:
+			for other_wall in wall.alveolus.walls:
+				if wall is not other_wall:
+					if wall.structure is other_wall.structure:
+						other_wall.adjacent_walls.append( wall )
+					elif any( n in other_wall.structure.nodes for n in wall.structure.nodes ):
+						other_wall.adjacent_walls.append( wall )
+
+
 

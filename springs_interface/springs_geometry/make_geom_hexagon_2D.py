@@ -1,8 +1,9 @@
-from ..node          import Node
-from ..spring        import Spring
-from ..boundary      import Boundary
-from ..structure     import Structure
-from ..springNetwork import SpringNetwork
+from ..node           import Node
+from ..spring         import Spring
+from ..boundary       import Boundary
+from ..structure      import Structure
+from ..structureGroup import StructureGroup
+from ..springNetwork  import SpringNetwork
 import math
 import numpy as np
 import scipy.spatial
@@ -23,6 +24,7 @@ def make_geom_hexagon_2D(geom_size=[1,1]):
 	vor = scipy.spatial.Voronoi( xyz )
 	v = vor.vertices
 	e = vor.ridge_vertices
+	r = vor.regions
 
 	# scipy.spatial.voronoi_plot_2d(vor)
 	# plt.show()
@@ -57,12 +59,21 @@ def make_geom_hexagon_2D(geom_size=[1,1]):
 
 	# construct springs
 	springs_nodes = [ [ nodes_ind.index(eij) for eij in ei ] for ei in e ]
-	springs = [ Spring(node_start=sn[0], node_end=sn[1]) for sn in springs_nodes ]
+	springs = [ Spring(node_start_index=sn[0], node_end_index=sn[1]) for sn in springs_nodes ]
 	for spring in springs:
-		spring.rest_length = np.linalg.norm( nodes_position[spring.node_end,:] - nodes_position[spring.node_start,:] )
+		spring.rest_length = np.linalg.norm( nodes_position[spring.node_end_index,:] - nodes_position[spring.node_start_index,:] )
 
 	# construct wall structures
-	walls = [ Structure(nodes=[s.node_start, s.node_end], springs=[i]) for i, s in enumerate(springs) ]
+	structures = [ Structure(nodes_indexes=[s.node_start_index, s.node_end_index], springs_indexes=[i]) for i, s in enumerate(springs) ]
+
+	# construct regions enclosed by wall structures
+	regions_structures = [ [] for r in vor.regions ]
+	regions_nodes_indexes = [ [ nodes_ind.index(ri) for ri in r if ri in nodes_ind ] for r in vor.regions ]
+	for structure_index, structure in enumerate(structures):
+		for region_index, region_nodes_indexes in enumerate(regions_nodes_indexes):
+			if all( n in region_nodes_indexes for n in structure.nodes_indexes ):
+				regions_structures[region_index].append( structure_index )
+	structure_groups = [ StructureGroup(structures_indexes=rs) for rs in regions_structures if len(rs) > 1 ]
 
 	# construct boundaries
 	for bi in b:
@@ -75,7 +86,7 @@ def make_geom_hexagon_2D(geom_size=[1,1]):
 	boundaries[2].outward_direction = [ 0.0,-1.0]
 	boundaries[3].outward_direction = [ 0.0,+1.0]
 	for boundary, bi in zip(boundaries, b):
-		boundary.nodes = [ nodes_ind.index(bij[0]) for bij in bi ]
+		boundary.nodes_indexes = [ nodes_ind.index(bij[0]) for bij in bi ]
 		start = [ bij[0] for bij in bi ]
 		end   = [ bij[1] for bij in bi ]
 		bv = v[end,:] - v[start,:]
@@ -84,6 +95,11 @@ def make_geom_hexagon_2D(geom_size=[1,1]):
 
 	#
 	net = SpringNetwork(num_dimensions=2)
-	net.setup(nodes, springs, boundaries)
+	net.setup(
+		nodes=nodes,
+		springs=springs,
+		structures=structures,
+		structure_groups=structure_groups,
+		boundaries=boundaries)
 
-	return net, walls
+	return net
