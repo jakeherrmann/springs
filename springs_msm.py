@@ -14,9 +14,12 @@ def main(argv):
 	save_displays = False
 	force_min   = 0.000
 	force_delta = 0.025
+	job_name = ''
 	if len(argv)>=2:
 		force_min   = float(argv[0])
 		force_delta = float(argv[1])
+	if len(argv)>=3:
+		job_name = argv[2]
 	force_max = force_min + force_delta
 
 	# create geometry for spring network and anatomical structures
@@ -26,8 +29,8 @@ def main(argv):
 		net = spr.make_geom_hexagon_2D([28,24]) ; fix_node = None #282 is top left
 		# net = spr.make_geom_hexagon_2D([56,48])
 		net.precision = 'double' #'float'
-		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
-		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
+		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
+		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
 		# net.boundaries[0].fixed = True
 		# net.boundaries[1].fixed = True
 		# net.boundaries[2].fixed = True
@@ -45,8 +48,8 @@ def main(argv):
 	elif setup_type=='truncoct_3D':
 		net = spr.make_geom_truncoct_3D([6,6,6], split_walls_into_triangles=False)
 		net.precision = 'double'
-		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
-		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
+		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
+		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
 		# net.boundaries[0].fixed = True
 		# net.boundaries[1].fixed = True
 		net.boundaries[0].force_magnitudes = [+0.03] * len(net.boundaries[0].nodes)
@@ -64,8 +67,8 @@ def main(argv):
 	elif setup_type=='file':
 		net = spr.SpringNetwork()
 		net.read_spring_network(Path('.')/'..'/'TEST', reinitialize=True)
-		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
-		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
+		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
+		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
 
 	else:
 		print( 'UKNOWN SETUP' )
@@ -131,81 +134,82 @@ def main(argv):
 			lung.net.num_dimensions,
 			1000*force_min,
 			1000*force_max)
-		if ( Path('.')/'..'/save_folder_name ).exists():
-			print('Folder for this simulation already exists.  Exiting.')
+		# if ( Path('.')/'..'/save_folder_name ).exists():
+		# 	print('Folder for this simulation already exists.  Exiting.')
+		# 	print(' ')
+		# else:
+		# 	pass
+		for b in net.boundaries:
+			b.force_magnitudes = [force_min] * len(b.nodes)
+		lung.stretch(1.0, dimensions=None, boundary_indexes=None)
+		if show_displays or save_displays:
+			bio.display(lung,
+				color_variable='stiffness_tension',
+				color_range=(-0.05,20.0),
+				ax_lims=ax_lims,
+				delay=None,
+				save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(0) if save_displays else None,
+				show=show_displays)
+		lung.save( Path('.')/'..'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+		for iter_cycle in range(num_cycles):
 			print(' ')
-		else:
+			print('{:03d}'.format(iter_cycle))
+			# inspiration
+			iter_total += 1
+			for b in net.boundaries:
+				b.force_magnitudes = [force_max] * len(b.nodes)
+			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
+			lung.save( Path('.')/'..'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+			spring_strains_in = [ spring.strain for spring in lung.net.springs ]
+			current_stretch = sum(spring_strains_in) / len(spring_strains_in)
+			print( ('IN:  '
+					'{:07.2f}% average strain, '
+					'{:06d} springs remaining, ').format(
+					100.0*current_stretch,
+					[ s.broken for s in lung.net.springs ].count(False)))
+			# expiration
+			iter_total += 1
 			for b in net.boundaries:
 				b.force_magnitudes = [force_min] * len(b.nodes)
 			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-			if show_displays or save_displays:
-				bio.display(lung,
-					color_variable='stiffness_tension',
-					color_range=(-0.05,20.0),
-					ax_lims=ax_lims,
-					delay=None,
-					save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(0) if save_displays else None,
-					show=show_displays)
 			lung.save( Path('.')/'..'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
-			for iter_cycle in range(num_cycles):
-				print(' ')
-				print('{:03d}'.format(iter_cycle))
-				# inspiration
-				iter_total += 1
-				for b in net.boundaries:
-					b.force_magnitudes = [force_max] * len(b.nodes)
-				lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-				lung.save( Path('.')/'..'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
-				spring_strains_in = [ spring.strain for spring in lung.net.springs ]
-				current_stretch = sum(spring_strains_in) / len(spring_strains_in)
-				print( ('IN:  '
-						'{:07.2f}% average strain, '
-						'{:06d} springs remaining, ').format(
-						100.0*current_stretch,
-						[ s.broken for s in lung.net.springs ].count(False)))
-				# expiration
-				iter_total += 1
-				for b in net.boundaries:
-					b.force_magnitudes = [force_min] * len(b.nodes)
-				lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-				lung.save( Path('.')/'..'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
-				spring_strains_ex = [ spring.strain for spring in lung.net.springs ]
-				current_stretch = sum(spring_strains_ex) / len(spring_strains_ex)
-				print( ('EX:  '
-						'{:07.2f}% average strain, '
-						'{:06d} springs remaining, ').format(
-						100.0*current_stretch,
-						[ s.broken for s in lung.net.springs ].count(False)))
-				# compute average strain and strain energy rate
-				spring_strains_mean  = [ 0.5*(i+e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
-				spring_strains_delta = [  abs(i-e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
-				spring_strain_energy_rates = [ ((i**2)-(e**2))/time_cycle for i, e in zip(spring_strains_in, spring_strains_ex) ]
-				spring_strain_energy_rates = [ r*(s.rest_length**2)*s.stiffness_tension[0] for s, r in zip(lung.net.springs, spring_strain_energy_rates) ]
-				print( ('{:07.3f} mean average strain, '
-						'{:07.5f} mean average strain energy rate').format(
-						sum(spring_strains_mean)/len(spring_strains_mean),
-						sum(spring_strain_energy_rates)/len(spring_strain_energy_rates)))
+			spring_strains_ex = [ spring.strain for spring in lung.net.springs ]
+			current_stretch = sum(spring_strains_ex) / len(spring_strains_ex)
+			print( ('EX:  '
+					'{:07.2f}% average strain, '
+					'{:06d} springs remaining, ').format(
+					100.0*current_stretch,
+					[ s.broken for s in lung.net.springs ].count(False)))
+			# compute average strain and strain energy rate
+			spring_strains_mean  = [ 0.5*(i+e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
+			spring_strains_delta = [  abs(i-e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
+			spring_strain_energy_rates = [ ((i**2)-(e**2))/time_cycle for i, e in zip(spring_strains_in, spring_strains_ex) ]
+			spring_strain_energy_rates = [ r*(s.rest_length**2)*s.stiffness_tension[0] for s, r in zip(lung.net.springs, spring_strain_energy_rates) ]
+			print( ('{:07.3f} mean average strain, '
+					'{:07.5f} mean average strain energy rate').format(
+					sum(spring_strains_mean)/len(spring_strains_mean),
+					sum(spring_strain_energy_rates)/len(spring_strain_energy_rates)))
 
-				# halt if solver fails
-				if any( [ math.isnan(spring.strain) for spring in lung.net.springs ] ):
-					print( 'FOUND NAN IN SOLUTION' )
-					return
+			# halt if solver fails
+			if any( [ math.isnan(spring.strain) for spring in lung.net.springs ] ):
+				print( 'FOUND NAN IN SOLUTION' )
+				return
 
-				# assign inputs to fibroblasts
-				for agent in lung.agents:
-					agent.strain = statistics.mean( [ spring_strains_mean[si] for si in agent.wall.structure.springs_indexes ] )
-					agent.strain_energy_rate = statistics.mean( [ spring_strain_energy_rates[si] for si in agent.wall.structure.springs_indexes ] )
-				lung.agent_actions( time_cycle )
-				lung.net.break_spring('stiffness_tension', 0.0, relop='<=')
-				if show_displays or save_displays:
-					if (iter_cycle+1) % 5 is 0:
-						bio.display(lung,
-							color_variable='stiffness_tension',
-							color_range=(-0.05,20.0),
-							ax_lims=ax_lims,
-							delay=None,
-							save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(iter_cycle+1) if save_displays else None,
-							show=show_displays)
+			# assign inputs to fibroblasts
+			for agent in lung.agents:
+				agent.strain = statistics.mean( [ spring_strains_mean[si] for si in agent.wall.structure.springs_indexes ] )
+				agent.strain_energy_rate = statistics.mean( [ spring_strain_energy_rates[si] for si in agent.wall.structure.springs_indexes ] )
+			lung.agent_actions( time_cycle )
+			lung.net.break_spring('stiffness_tension', 0.0, relop='<=')
+			if show_displays or save_displays:
+				if (iter_cycle+1) % 5 is 0:
+					bio.display(lung,
+						color_variable='stiffness_tension',
+						color_range=(-0.05,20.0),
+						ax_lims=ax_lims,
+						delay=None,
+						save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(iter_cycle+1) if save_displays else None,
+						show=show_displays)
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
