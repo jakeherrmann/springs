@@ -25,6 +25,8 @@ numeric_args = {
 	'num_iter_save'
 	'num_iter_print'
 	'num_iter_max'
+	'use_sum_net_force'
+	'use_numerical_hessian'
 	'tolerance_change_energy'
 	'tolerance_sum_net_force'
 	} ;

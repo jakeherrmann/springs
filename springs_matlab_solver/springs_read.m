@@ -16,6 +16,10 @@ numeric_args = {
 	'tolerance_change_energy'
 	'tolerance_sum_net_force'
 	} ;
+bool_args = {
+	'use_sum_net_force'
+	'use_numerical_hessian'
+	} ;
 	
 filename = file_parameters ;
 fid = fopen( filename ,'rt') ;
@@ -24,6 +28,8 @@ while ~feof( fid )
 	val = strtrim(val) ;
 	if ismember( arg , numeric_args )
 		val = str2num(val) ;
+	elseif ismember( arg , bool_args )
+		val = logical(str2num(val))
 	end
 	network_param.(arg) = val ; 
 end

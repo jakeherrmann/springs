@@ -1,4 +1,4 @@
-function [ nodes , springs , network_param ] = springs_read( dir_output , varargin )
+function [ nodes , springs , network_param ] = springs_read_py( dir_output , varargin )
 
 use_solver_format = true ;
 if numel(varargin) > 0

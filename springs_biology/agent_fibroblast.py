@@ -11,8 +11,8 @@ class Agent_Fibroblast(Agent):
 		self.actions = [ self.maintain ]
 		self.strain = 0.0
 		self.strain_energy_rate = 0.0
-		self.degrade_rate_basal = 0.100 ;
-		self.repair_rate_basal  = 0.100 ;
+		self.degrade_rate_basal = 0.050 ;
+		self.repair_rate_basal  = 0.050 ;
 		self.degrade_coefs = [ 1.0000 , 10.4350 ,  3.5173 , 13.0130 , 0.3709 ]
 		self.repair_coefs  = [ 0.3968 ,  4.5944 , 45.2080 ]
 

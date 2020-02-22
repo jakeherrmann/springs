@@ -44,6 +44,8 @@ class SpringNetwork:
 		self.solver_num_iter_save = 0
 		self.solver_num_iter_print = 0
 		self.solver_num_iter_max = 0
+		self.solver_use_sum_net_force = False
+		self.solver_use_numerical_hessian = False
 		self.solver_tolerance_change_energy = 1.0e-12
 		self.solver_tolerance_sum_net_force = 1.0e-12
 		#
@@ -109,6 +111,8 @@ class SpringNetwork:
 			file.write(            'num_iter_save {:d}\n'.format(self.solver_num_iter_save))
 			file.write(           'num_iter_print {:d}\n'.format(self.solver_num_iter_print))
 			file.write(             'num_iter_max {:d}\n'.format(self.solver_num_iter_max))
+			file.write(        'use_sum_net_force {:d}\n'.format(self.solver_use_sum_net_force))
+			file.write(    'use_numerical_hessian {:d}\n'.format(self.solver_use_numerical_hessian))
 			file.write(  'tolerance_change_energy {:e}\n'.format(self.solver_tolerance_change_energy))
 			file.write(  'tolerance_sum_net_force {:e}\n'.format(self.solver_tolerance_sum_net_force))
 		file_name = dir_input / 'network_nodes.dat'
@@ -153,6 +157,8 @@ class SpringNetwork:
 				elif arg[0]=="num_iter_save"            : self.solver_num_iter_save           =   int(arg[1])
 				elif arg[0]=="num_iter_print"           : self.solver_num_iter_print          =   int(arg[1])
 				elif arg[0]=="num_iter_max"             : self.solver_num_iter_max            =   int(arg[1])
+				elif arg[0]=="use_sum_net_force"        : self.solver_use_sum_net_force       =  bool(arg[1])
+				elif arg[0]=="use_numerical_hessian"    : self.solver_use_numerical_hessian   =  bool(arg[1])
 				elif arg[0]=="tolerance_change_energy"  : self.solver_tolerance_change_energy = float(arg[1])
 				elif arg[0]=="tolerance_sum_net_force"  : self.solver_tolerance_sum_net_force = float(arg[1])
 			self.nodes   = [ Node(self.num_dimensions) for count in range(self.num_nodes) ]

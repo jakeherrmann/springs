@@ -9,7 +9,7 @@ import springs_biology as bio
 def main(argv):
 	
 	# create geometry for spring network and anatomical structures
-	setup_type = 'hexagon_2D'
+	setup_type = 'truncoct_3D'
 
 	if setup_type=='hexagon_2D':
 		net = spr.make_geom_hexagon_2D([28,24])

@@ -67,12 +67,17 @@ def make_geom_hexagon_2D(geom_size=[1,1]):
 	structures = [ Structure(nodes_indexes=[s.node_start_index, s.node_end_index], springs_indexes=[i]) for i, s in enumerate(springs) ]
 
 	# construct regions enclosed by wall structures
-	regions_structures = [ [] for r in vor.regions ]
 	regions_nodes_indexes = [ [ nodes_ind.index(ri) for ri in r if ri in nodes_ind ] for r in vor.regions ]
+	nodes_regions = [ [] for n in nodes ]
+	for region_index, region_nodes_indexes in enumerate(regions_nodes_indexes):
+		for n in region_nodes_indexes:
+			nodes_regions[n].append( region_index )
+	regions_structures = [ [] for r in vor.regions ]
 	for structure_index, structure in enumerate(structures):
-		for region_index, region_nodes_indexes in enumerate(regions_nodes_indexes):
-			if all( n in region_nodes_indexes for n in structure.nodes_indexes ):
-				regions_structures[region_index].append( structure_index )
+		for node_index in structure.nodes_indexes:
+			for region_index in nodes_regions[node_index]:
+				if all( n in regions_nodes_indexes[region_index] for n in structure.nodes_indexes ):
+					regions_structures[region_index].append( structure_index )
 	structure_groups = [ StructureGroup(structures_indexes=rs) for rs in regions_structures if len(rs) > 1 ]
 
 	# construct boundaries

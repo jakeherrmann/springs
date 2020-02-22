@@ -42,6 +42,8 @@ public:
 	std::size_t num_iter_save  = 0 ;
 	std::size_t num_iter_print = 0 ;
 	std::size_t num_iter_max   = 0 ;
+	bool use_sum_net_force = false ;
+	bool use_numerical_hessian = false ;
 	double tolerance_change_energy = 1.0e-12 ;
 	double tolerance_sum_net_force = 1.0e-12 ;
 
@@ -149,6 +151,8 @@ private:
 	std::size_t num_iter_save ;
 	std::size_t num_iter_print ;
 	std::size_t num_iter_max ;
+	bool use_sum_net_force ;
+	bool use_numerical_hessian ;
 	T tolerance_change_energy ;
 	T tolerance_sum_net_force ;
 	T sum_net_force_magnitude ;
@@ -157,14 +161,14 @@ private:
 	spmat<T> hessian ;
 public:
 	//
-	T total_energy( void ) ;
+	T total_energy( const bool & ) ;
 	void move_points_newton( const T & ) ;
 	void move_points_force( const T & ) ;
 	void move_points_rand( const T & ) ;
 	bool test_reboot( void ) ;
 	bool accept_new_points( const T & , const T & ) ;
 	void find_max_spring_length( void ) ;
-	T heat_up( const T & , const T & ) ;
+	T heat_up( const T & , const T &, const bool & ) ;
 	void solve( void ) ;
 	void anneal( void ) ;
 	void minimize_energy( void ) ;
