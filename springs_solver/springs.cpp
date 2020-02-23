@@ -198,6 +198,10 @@ std::size_t Spring<T,N>::num_stiffness_compression ;
 std::unique_ptr<ASpringNetwork> ASpringNetwork::create_spring_network_obj( const NetworkParameters & network_parameters )
 {
 	std::unique_ptr<ASpringNetwork> asn = NULL ;
+	std::cout
+		<< '\t' << network_parameters.precision
+		<< '\t' << network_parameters.num_dimensions << 'D'
+		<< std::endl ;
 	if( network_parameters.precision.compare( "double" ) == 0 ) {
 		if     ( network_parameters.num_dimensions == 2 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<double,2>() ) ; }
 		else if( network_parameters.num_dimensions == 3 ) { asn = std::unique_ptr<ASpringNetwork>( new SpringNetwork<double,3>() ) ; }
