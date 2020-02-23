@@ -15,18 +15,21 @@ def main(argv):
 	force_min   = 0.000
 	force_delta = 0.025
 	job_name = ''
+	batch_name = ''
 	if len(argv)>=2:
 		force_min   = float(argv[0])
 		force_delta = float(argv[1])
 	if len(argv)>=3:
 		job_name = argv[2]
+	if len(argv)>=4:
+		batch_name = argv[3]
 	force_max = force_min + force_delta
 
 	# create geometry for spring network and anatomical structures
 	setup_type = 'hexagon_2D'
 
 	if setup_type=='hexagon_2D':
-		net = spr.make_geom_hexagon_2D([28,24]) ; fix_node = None #282 is top left
+		net = spr.make_geom_hexagon_2D([56,48]) ; fix_node = None #282 is top left
 		# net = spr.make_geom_hexagon_2D([56,48])
 		net.precision = 'double' #'float'
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
@@ -129,11 +132,12 @@ def main(argv):
 		num_forces = 2
 		num_cycles = 200
 		iter_total = 0
-		save_folder_name = 'msm_{:d}breath_{:d}D_hetero_small_force{:03.0f}-{:03.0f}'.format(
+		save_folder_name = 'msm_{:d}breath_{:d}D_force{:03.0f}-{:03.0f}'.format(
 			num_cycles,
 			lung.net.num_dimensions,
 			1000*force_min,
 			1000*force_max)
+		save_folder_name += '_{:02d}'.format(int(job_name))
 		# if ( Path('.')/'..'/save_folder_name ).exists():
 		# 	print('Folder for this simulation already exists.  Exiting.')
 		# 	print(' ')
@@ -150,7 +154,7 @@ def main(argv):
 				delay=None,
 				save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(0) if save_displays else None,
 				show=show_displays)
-		lung.save( Path('.')/'..'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+		lung.save( Path('.')/'..'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 		for iter_cycle in range(num_cycles):
 			print(' ')
 			print('{:03d}'.format(iter_cycle))
@@ -172,7 +176,7 @@ def main(argv):
 			for b in net.boundaries:
 				b.force_magnitudes = [force_min] * len(b.nodes)
 			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-			lung.save( Path('.')/'..'/'SAVE'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+			lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 			spring_strains_ex = [ spring.strain for spring in lung.net.springs ]
 			current_stretch = sum(spring_strains_ex) / len(spring_strains_ex)
 			print( ('EX:  '
