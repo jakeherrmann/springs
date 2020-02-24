@@ -154,7 +154,7 @@ def main(argv):
 				delay=None,
 				save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(0) if save_displays else None,
 				show=show_displays)
-		lung.save( Path('.')/'..'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+		lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 		for iter_cycle in range(num_cycles):
 			print(' ')
 			print('{:03d}'.format(iter_cycle))
@@ -163,7 +163,7 @@ def main(argv):
 			for b in net.boundaries:
 				b.force_magnitudes = [force_max] * len(b.nodes)
 			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-			lung.save( Path('.')/'..'/'SAVE'/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+			lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 			spring_strains_in = [ spring.strain for spring in lung.net.springs ]
 			current_stretch = sum(spring_strains_in) / len(spring_strains_in)
 			print( ('IN:  '
