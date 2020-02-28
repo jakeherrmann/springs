@@ -29,7 +29,7 @@ while ~feof( fid )
 	if ismember( arg , numeric_args )
 		val = str2num(val) ;
 	elseif ismember( arg , bool_args )
-		val = logical(str2num(val))
+		val = logical(str2num(val)) ;
 	end
 	network_param.(arg) = val ; 
 end
@@ -37,7 +37,7 @@ fclose( fid ) ;
 
 nodes.position = zeros( [ network_param.num_points , network_param.num_dimensions ] ) ;
 nodes.force    = zeros( [ network_param.num_points , network_param.num_dimensions ] ) ;
-nodes.fixed    = false( [ network_param.num_points , 1                            ] ) ;
+nodes.fixed    = false( [ network_param.num_points , network_param.num_dimensions ] ) ;
 
 springs.nodes                 = zeros( [ network_param.num_springs , 2                                       ] ) ;
 springs.rest_length           = zeros( [ network_param.num_springs , 1                                       ] ) ;
@@ -50,7 +50,7 @@ fid = fopen( filename ,'rb') ;
 for pp = 1 : network_param.num_points
 	nodes.position(pp,:) = fread( fid , network_param.num_dimensions , network_param.precision ) ;
 	nodes.force(pp,:)    = fread( fid , network_param.num_dimensions , network_param.precision ) ;
-	nodes.fixed(pp)      = fread( fid , 1                            , 'uint8'                 ) ;
+	nodes.fixed(pp,:)    = fread( fid , network_param.num_dimensions , 'uint8'                 ) ;
 end
 fclose( fid ) ;
 

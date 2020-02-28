@@ -16,10 +16,10 @@ def main(argv):
 		net.precision = 'float'
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
 		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
-		# net.boundaries[0].fixed = True
-		# net.boundaries[1].fixed = True
-		# net.boundaries[2].fixed = True
-		# net.boundaries[3].fixed = True
+		# net.boundaries[0].fixed = [True] * 2
+		# net.boundaries[1].fixed = [True] * 2
+		# net.boundaries[2].fixed = [True] * 2
+		# net.boundaries[3].fixed = [True] * 2
 		net.boundaries[0].force_magnitudes = [+0.03] * len(net.boundaries[0].nodes)
 		net.boundaries[1].force_magnitudes = [+0.03] * len(net.boundaries[1].nodes)
 		net.boundaries[2].force_magnitudes = [+0.03] * len(net.boundaries[2].nodes)
@@ -35,8 +35,8 @@ def main(argv):
 		net.precision = 'float'
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/'INPUT'
 		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/'OUTPUT'
-		net.boundaries[0].fixed = True
-		net.boundaries[1].fixed = True
+		net.boundaries[0].fixed = [True] * 3
+		net.boundaries[1].fixed = [True] * 3
 		net.boundaries[2].force_magnitudes = [+0.03] * len(net.boundaries[2].nodes)
 		net.boundaries[3].force_magnitudes = [+0.03] * len(net.boundaries[3].nodes)
 		net.boundaries[4].force_magnitudes = [+0.03] * len(net.boundaries[4].nodes)
@@ -90,7 +90,7 @@ def main(argv):
 		force_min = 0.425 ; force_max = 0.475
 		time_cycle = 5.0
 		num_forces = 2
-		num_cycles = 50
+		num_cycles = 1
 		iter_total = 0
 		for b in net.boundaries:
 			b.force_magnitudes = [force_min] * len(b.nodes)

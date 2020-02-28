@@ -200,7 +200,7 @@ def display_3D(spring_network, color_variable=None, color_range=None, ax_lims=No
 				vmin = min(v)
 				vmax = max(v)
 				color_range = (vmin, vmax) if vmin!=vmax else (vmin,vmin+1.0)
-			w = [ sum([ v[s] for s in w.springs ])/len(w.springs) for w in structures ]
+			w = [ sum([ v[s] for s in w.springs_indexes ])/len(w.springs_indexes) for w in structures ]
 			w = [ (wi-color_range[0])/(color_range[1]-color_range[0]) for wi in w ]
 			w = [ max(0.0, min(1.0, wi)) for wi in w ]
 			w = [ 1.0-wi for wi in w ]

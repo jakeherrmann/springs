@@ -21,6 +21,10 @@ public:
 	T   operator[]( const std::size_t & ) const ; // const, cannot change indexed object
 	T & operator[]( const std::size_t & ) ;       // non-const, can change indexed object
 	
+	//
+	Vector<T,N> zero_where    ( const Vector<bool,N> & ) const ;
+	Vector<T,N> zero_where_not( const Vector<bool,N> & ) const ;
+
 	// scalar assignment
 	Vector<T,N> & operator= ( const T & ) ;
 	

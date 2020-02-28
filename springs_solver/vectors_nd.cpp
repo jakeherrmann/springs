@@ -34,6 +34,28 @@ Vector<T,N> & Vector<T,N>::operator=( const T & a )
 	return *this ;
 }
 
+// elementwise boolean multiplication
+template< class T , std::size_t N >
+Vector<T,N> Vector<T,N>::zero_where( const Vector<bool,N> & y )
+const
+{
+	Vector<T,N> v ;
+	for( std::size_t n = 0 ; n < N ; ++n ) {
+		v[n] = ( y[n] ) ? static_cast<T>(0.0) : x[n] ;
+	}
+	return v ;
+}
+template< class T , std::size_t N >
+Vector<T,N> Vector<T,N>::zero_where_not( const Vector<bool,N> & y )
+const
+{
+	Vector<T,N> v ;
+	for( std::size_t n = 0 ; n < N ; ++n ) {
+		v[n] = ( y[n] ) ? x[n] : static_cast<T>(0.0) ;
+	}
+	return v ;
+}
+
 // dot product of two vectors
 template< class T , std::size_t N >
 T Vector<T,N>::dot( const Vector<T,N> & y )
@@ -57,7 +79,7 @@ const
 		d = x[n] - y[n] ;
 		s += d*d ;
 	}
-	return std::sqrt(s) ;
+	return static_cast<T>(std::sqrt(s)) ;
 }
 
 // vector norm
@@ -69,7 +91,7 @@ const
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		s += x[n]*x[n] ;
 	}
-	return std::sqrt(s) ;
+	return static_cast<T>(std::sqrt(s)) ;
 }
 
 // max and min
@@ -265,3 +287,6 @@ template class Vector<float ,4> ;
 template class Vector<double,2> ;
 template class Vector<double,3> ;
 template class Vector<double,4> ;
+template class Vector<bool  ,2> ;
+template class Vector<bool  ,3> ;
+template class Vector<bool  ,4> ;

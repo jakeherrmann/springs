@@ -5,7 +5,7 @@ class Node:
 	def __init__(self, num_dimensions):
 		self.position   = [0.0] * num_dimensions
 		self.force      = [0.0] * num_dimensions
-		self.fixed      = False
+		self.fixed      = [False] * num_dimensions
 		self.referenced = True
 		#
 		self.adjacent_nodes = []
@@ -23,7 +23,7 @@ class Node:
 		file_format.fixed_format = True
 		file_format.variables.append( FileVariable('position',FPP,ND,[float],True) )
 		file_format.variables.append( FileVariable('force'   ,FPP,ND,[float],True) )
-		file_format.variables.append( FileVariable('fixed'   ,'?',1 , bool  ,True) )
+		file_format.variables.append( FileVariable('fixed'   ,'?',ND,[bool ],True) )
 		if not use_solver_format:
 			file_format.variables.append( FileVariable('referenced','?',1,bool,True) )
 		return file_format

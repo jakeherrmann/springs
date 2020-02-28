@@ -129,6 +129,13 @@ void NetworkParameters::save_parameters( const char * file_name )
 //////////////////////////  POINT //////////////////////////
 ////////////////////////////////////////////////////////////
 
+template< class T , std::size_t N >
+void Point<T,N>::move( const Vector<T,N> & displacement )
+{
+	if( !this->fixed_all_dim ) {
+		this->position += displacement.zero_where( this->fixed_dim ) ;
+	}
+}
 
 
 ////////////////////////////////////////////////////////////
@@ -274,15 +281,17 @@ void SpringNetwork<T,N>::load_network_binary( const char * file_nodes ,
 	if( file_nodes != NULL ) {
 		file_ptr = std::fopen( file_nodes , "rb" ) ;
 		read_data_T     = new T            [N+N] ;
-		read_data_uint8 = new std::uint8_t [1  ] ;
+		read_data_uint8 = new std::uint8_t [N  ] ;
 		for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
 			std::fread( read_data_T     , sizeof(T)            , N+N , file_ptr ) ;
-			std::fread( read_data_uint8 , sizeof(std::uint8_t) , 1   , file_ptr ) ;
+			std::fread( read_data_uint8 , sizeof(std::uint8_t) , N   , file_ptr ) ;
+			p->fixed_all_dim = true ;
 			for( std::size_t n = 0 ; n < N ; ++n ) {
 				p->position[n]      = read_data_T[n  ] ;
 				p->force_applied[n] = read_data_T[n+N] ;
+				p->fixed_dim[n] = ( read_data_uint8[n] != 0 ) ;
+				p->fixed_all_dim = p->fixed_all_dim && p->fixed_dim[n] ;
 			}
-			p->fixed = ( read_data_uint8[0] == 1 ) ;
 		}
 		delete [] read_data_T     ;
 		delete [] read_data_uint8 ;
@@ -331,15 +340,15 @@ void SpringNetwork<T,N>::save_network_binary( const char * file_nodes ,
 	if( file_nodes != NULL ) {
 		file_ptr = std::fopen( file_nodes , "wb" ) ;
 		write_data_T     = new T            [N+N] ;
-		write_data_uint8 = new std::uint8_t [1  ] ;
+		write_data_uint8 = new std::uint8_t [N  ] ;
 		for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
 			for( std::size_t n = 0 ; n < N ; ++n ) {
 				write_data_T[n  ] = p->position[n]      ;
 				write_data_T[n+N] = p->force_applied[n] ;
+				write_data_uint8[n] = static_cast<std::uint8_t>( p->fixed_dim[n] ) ;
 			}
-			write_data_uint8[0] = static_cast<bool>( p->fixed ) ;
 			std::fwrite( write_data_T     , sizeof(T)            , N+N , file_ptr ) ;
-			std::fwrite( write_data_uint8 , sizeof(std::uint8_t) , 1   , file_ptr ) ;
+			std::fwrite( write_data_uint8 , sizeof(std::uint8_t) , N   , file_ptr ) ;
 		}
 		delete [] write_data_T     ;
 		delete [] write_data_uint8 ;
@@ -389,7 +398,7 @@ void SpringNetwork<T,N>::construct_network( void )
 		points[p_start].not_referenced = false ;
 		points[p_end  ].not_referenced = false ;
 	}
-	nodes.erase( std::remove_if( nodes.begin() , nodes.end() , []( Node n ){ return n.point->fixed          ; } ) , nodes.end() ) ;
+	nodes.erase( std::remove_if( nodes.begin() , nodes.end() , []( Node n ){ return n.point->fixed_all_dim  ; } ) , nodes.end() ) ;
 	nodes.erase( std::remove_if( nodes.begin() , nodes.end() , []( Node n ){ return n.point->not_referenced ; } ) , nodes.end() ) ;
 	for( std::size_t i = 0 ; i < nodes.size() ; ++i ) {
 		nodes[i].node_index = i ;
@@ -643,32 +652,34 @@ void SpringNetwork<T,N>::compute_hessian_numerical( void )
 	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
 		// change in net force at n'th node w.r.t. small changes in n'th node position
 		for( d_p = 0 ; d_p < N ; ++d_p ) {
-			n->point->position[d_p] += delta_position_half ;
-			force_step_pos = static_cast<T>(0.0) ;
-			for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
-				l->spring->spring_energy() ;
-				if( l->spring_direction > static_cast<T>(0) ) {
-					force_step_pos += l->spring->force ;
-				} else {
-					force_step_pos -= l->spring->force ;
+			if( ! n->point->fixed_dim[d_p] ) {
+				n->point->position[d_p] += delta_position_half ;
+				force_step_pos = static_cast<T>(0.0) ;
+				for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
+					l->spring->spring_energy() ;
+					if( l->spring_direction > static_cast<T>(0) ) {
+						force_step_pos += l->spring->force ;
+					} else {
+						force_step_pos -= l->spring->force ;
+					}
 				}
-			}
-			n->point->position[d_p] -= delta_position ;
-			force_step_neg = static_cast<T>(0.0) ;
-			for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
-				l->spring->spring_energy() ;
-				if( l->spring_direction > static_cast<T>(0) ) {
-					force_step_neg += l->spring->force ;
-				} else {
-					force_step_neg -= l->spring->force ;
+				n->point->position[d_p] -= delta_position ;
+				force_step_neg = static_cast<T>(0.0) ;
+				for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
+					l->spring->spring_energy() ;
+					if( l->spring_direction > static_cast<T>(0) ) {
+						force_step_neg += l->spring->force ;
+					} else {
+						force_step_neg -= l->spring->force ;
+					}
 				}
-			}
-			n->point->position[d_p] += delta_position_half ;
-			force_delta = force_step_pos - force_step_neg ;
-			for( d_f = 0 ; d_f < N ; ++d_f ) {
-				sp_row.push_back( (n->node_index)*N + d_f ) ;
-				sp_col.push_back( (n->node_index)*N + d_p ) ;
-				sp_val.push_back( force_delta[d_f] / delta_position ) ;
+				n->point->position[d_p] += delta_position_half ;
+				force_delta = force_step_pos - force_step_neg ;
+				for( d_f = 0 ; d_f < N ; ++d_f ) {
+					sp_row.push_back( (n->node_index)*N + d_f ) ;
+					sp_col.push_back( (n->node_index)*N + d_p ) ;
+					sp_val.push_back( force_delta[d_f] / delta_position ) ;
+				}
 			}
 		}
 		// change in net force at n'th node w.r.t. small changes in linked node positions
@@ -676,22 +687,24 @@ void SpringNetwork<T,N>::compute_hessian_numerical( void )
 		for( l = n->links.begin() , l_end = n->links.end() ; l != l_end ; ++l ) {
 			if( l->node_index < nodes.size() ) {
 				for( d_p = 0 ; d_p < N ; ++d_p ) {
-					l->point->position[d_p] += delta_position_half ;
-					l->spring->spring_energy() ;
-					force_step_pos = l->spring->force ;
-					l->point->position[d_p] -= delta_position ;
-					l->spring->spring_energy() ;
-					force_step_neg = l->spring->force ;
-					l->point->position[d_p] += delta_position_half ;
-					if( l->spring_direction > static_cast<T>(0) ) {
-						force_delta = force_step_pos - force_step_neg ;
-					} else {
-						force_delta = force_step_neg - force_step_pos ;
-					}
-					for( d_f = 0 ; d_f < N ; ++d_f ) {
-						sp_row.push_back( (n->node_index)*N + d_f ) ;
-						sp_col.push_back( (l->node_index)*N + d_p ) ;
-						sp_val.push_back( force_delta[d_f] / delta_position ) ;
+					if( ! l->point->fixed_dim[d_p] ) {
+						l->point->position[d_p] += delta_position_half ;
+						l->spring->spring_energy() ;
+						force_step_pos = l->spring->force ;
+						l->point->position[d_p] -= delta_position ;
+						l->spring->spring_energy() ;
+						force_step_neg = l->spring->force ;
+						l->point->position[d_p] += delta_position_half ;
+						if( l->spring_direction > static_cast<T>(0) ) {
+							force_delta = force_step_pos - force_step_neg ;
+						} else {
+							force_delta = force_step_neg - force_step_pos ;
+						}
+						for( d_f = 0 ; d_f < N ; ++d_f ) {
+							sp_row.push_back( (n->node_index)*N + d_f ) ;
+							sp_col.push_back( (l->node_index)*N + d_p ) ;
+							sp_val.push_back( force_delta[d_f] / delta_position ) ;
+						}
 					}
 				}	
 			}
@@ -833,7 +846,7 @@ void SpringNetwork<T,N>::move_points_newton( const T & step_size )
 			small_displacement[d] = step_direction[ (n->node_index)*N + d ] ;
 		}
 		small_displacement *= step_size ;
-		n->point->position += small_displacement ;
+		n->point->move( small_displacement ) ;
 	}
 	return ;
 }
@@ -849,7 +862,7 @@ void SpringNetwork<T,N>::move_points_force( const T & step_size )
 	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
 		small_displacement = n->point->net_force ;
 		small_displacement *= step_size ;
-		n->point->position += small_displacement ;
+		n->point->move( small_displacement ) ;
 	}
 	return ;
 }
@@ -865,7 +878,7 @@ void SpringNetwork<T,N>::move_points_rand( const T & amplitude )
 		for( std::size_t d = 0 ; d < N ; ++d ) {
 			small_displacement[d] = amplitude * uni_1_1(rng) ;
 		}
-		n->point->position += small_displacement ;
+		n->point->move( small_displacement ) ;
 	}
 	return ;
 }

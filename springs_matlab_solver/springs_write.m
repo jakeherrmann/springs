@@ -47,7 +47,7 @@ fid = fopen( filename ,'wb') ;
 for nn = 1 : network_param.num_points
 	fwrite( fid , nodes.position(nn,:) , network_param.precision ) ;
 	fwrite( fid , nodes.force(nn,:)    , network_param.precision ) ;
-	fwrite( fid , nodes.fixed(nn)      , 'uint8'                 ) ;
+	fwrite( fid , nodes.fixed(nn,:)    , 'uint8'                 ) ;
 end
 fclose( fid ) ;
 
