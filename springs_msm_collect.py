@@ -20,7 +20,7 @@ def main(argv):
 		batch_name = argv[2]
 
 	
-	print( (Path('.')/'SAVE'/batch_name/).glob('*_{:04d}'.format(int(job_name))) )
+	print( (Path('.')/'SAVE'/batch_name).glob('*_{:04d}'.format(int(job_name))) )
 
 	return
 
