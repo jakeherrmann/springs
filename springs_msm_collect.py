@@ -19,26 +19,19 @@ def main(argv):
 	if len(argv)>=2:
 		batch_name = argv[1]
 
-	print( list( (Path('.')/'..'/'SAVE'/batch_name).glob('*_{:04d}'.format(int(job_name))) ) )
+	lung = bio.Lung()
+	for path_job in (Path('.')/'..'/'SAVE'/batch_name).glob('*_{:04d}'.format(int(job_name))):
+		node_positions = []
+		spring_stiffnesses = []
+		for path_stretch in path_job.glob( 'STRETCH_*' ):
+			lung.net.read_spring_network(
+				path_stretch,
+				reinitialize=True)
+			node_positions.append( [ n.position for n in lung.net.nodes ] )
+			spring_stiffnesses.append( [ s.effective_stiffness() for s in lung.net.springs ] )
+			print( node_positions , spring_stiffnesses )
 
 	return
-
-	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-	lung = bio.Lung()
-	lung.net.read_spring_network(
-		'',
-		reinitialize=True)
-	time_cycle = 5.0
-	num_forces = 2
-	num_cycles = 200
-	iter_total = 0
-	save_folder_name = 'msm_{:d}breath_{:d}D_force{:04.0f}-{:04.0f}'.format(
-		num_cycles,
-		lung.net.num_dimensions,
-		1000*force_min,
-		1000*force_max)
-	save_folder_name += '_{:04d}'.format(int(job_name))
-	lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
