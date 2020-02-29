@@ -137,7 +137,7 @@ def main(argv):
 			lung.net.num_dimensions,
 			1000*force_min,
 			1000*force_max)
-		save_folder_name += '_{:02d}'.format(int(job_name))
+		save_folder_name += '_{:04d}'.format(int(job_name))
 		# if ( Path('.')/'..'/save_folder_name ).exists():
 		# 	print('Folder for this simulation already exists.  Exiting.')
 		# 	print(' ')
