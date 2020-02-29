@@ -146,21 +146,22 @@ class SpringNetwork:
 		if reinitialize:
 			file_name = dir_output / 'network_parameters.txt'
 			with open(file_name,'rt') as file:
-				arg = file.readline().rstrip('\n').split()
-				if   arg[0]=="num_nodes"                : self.num_nodes                      =   int(arg[1])
-				elif arg[0]=="num_springs"              : self.num_springs                    =   int(arg[1])
-				elif arg[0]=="precision"                : self.precision                      =       arg[1]
-				elif arg[0]=="num_dimensions"           : self.num_dimensions                 =   int(arg[1])
-				elif arg[0]=="num_stiffness_tension"    : self.num_stiffness_tension          =   int(arg[1])
-				elif arg[0]=="num_stiffness_compression": self.num_stiffness_compression      =   int(arg[1])
-				elif arg[0]=="algorithm"                : self.solver_algorithm               =       arg[1]
-				elif arg[0]=="num_iter_save"            : self.solver_num_iter_save           =   int(arg[1])
-				elif arg[0]=="num_iter_print"           : self.solver_num_iter_print          =   int(arg[1])
-				elif arg[0]=="num_iter_max"             : self.solver_num_iter_max            =   int(arg[1])
-				elif arg[0]=="use_sum_net_force"        : self.solver_use_sum_net_force       =  bool(arg[1])
-				elif arg[0]=="use_numerical_hessian"    : self.solver_use_numerical_hessian   =  bool(arg[1])
-				elif arg[0]=="tolerance_change_energy"  : self.solver_tolerance_change_energy = float(arg[1])
-				elif arg[0]=="tolerance_sum_net_force"  : self.solver_tolerance_sum_net_force = float(arg[1])
+				for line in file.readlines():
+					arg = line.rstrip('\n').split()
+					if   arg[0]=="num_nodes"                : self.num_nodes                      =   int(arg[1])
+					elif arg[0]=="num_springs"              : self.num_springs                    =   int(arg[1])
+					elif arg[0]=="precision"                : self.precision                      =       arg[1]
+					elif arg[0]=="num_dimensions"           : self.num_dimensions                 =   int(arg[1])
+					elif arg[0]=="num_stiffness_tension"    : self.num_stiffness_tension          =   int(arg[1])
+					elif arg[0]=="num_stiffness_compression": self.num_stiffness_compression      =   int(arg[1])
+					elif arg[0]=="algorithm"                : self.solver_algorithm               =       arg[1]
+					elif arg[0]=="num_iter_save"            : self.solver_num_iter_save           =   int(arg[1])
+					elif arg[0]=="num_iter_print"           : self.solver_num_iter_print          =   int(arg[1])
+					elif arg[0]=="num_iter_max"             : self.solver_num_iter_max            =   int(arg[1])
+					elif arg[0]=="use_sum_net_force"        : self.solver_use_sum_net_force       =  bool(arg[1])
+					elif arg[0]=="use_numerical_hessian"    : self.solver_use_numerical_hessian   =  bool(arg[1])
+					elif arg[0]=="tolerance_change_energy"  : self.solver_tolerance_change_energy = float(arg[1])
+					elif arg[0]=="tolerance_sum_net_force"  : self.solver_tolerance_sum_net_force = float(arg[1])
 			self.nodes   = [ Node(self.num_dimensions) for count in range(self.num_nodes) ]
 			self.springs = [ Spring() for count in range(self.num_springs) ]
 			if not use_solver_format:
