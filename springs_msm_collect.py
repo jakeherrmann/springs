@@ -14,12 +14,11 @@ def main(argv):
 	save_displays = False
 	job_name = ''
 	batch_name = ''
+	if len(argv)>=1:
+		job_name = argv[0]
 	if len(argv)>=2:
-		job_name = argv[1]
-	if len(argv)>=3:
-		batch_name = argv[2]
+		batch_name = argv[1]
 
-	print( argv )
 	print( list( (Path('.')/'SAVE'/batch_name).glob('*_{:04d}'.format(int(job_name))) ) )
 
 	return
