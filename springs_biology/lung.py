@@ -19,7 +19,7 @@ class Lung:
 		#
 		self.alveoli = []
 		self.walls = []
-		if self.net.structure_groups is not None:
+		if self.net is not None:
 			self.build_lung_structure()
 
 	def save(self, save_dir):
@@ -27,7 +27,7 @@ class Lung:
 
 	def load(self, load_dir, reinitialize=False):
 		self.net.read_spring_network(load_dir, reinitialize=reinitialize)
-		if reinitialize and self.net.structure_groups is not None:
+		if reinitialize:
 			self.build_lung_structure()
 
 	def stretch(self, stretch_increment, dimensions='all', boundary_indexes='all'):
