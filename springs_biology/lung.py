@@ -12,7 +12,10 @@ class Lung:
 			agents=None,
 			spring_break_variable=None,
 			spring_break_threshold=0.0):
-		self.net = spring_network
+		if self.net is None:
+			self.net = spr.SpringNetwork()
+		else:
+			self.net = spring_network
 		self.agents = agents if agents is not None else []
 		self.spring_break_variable  = spring_break_variable
 		self.spring_break_threshold = spring_break_threshold
