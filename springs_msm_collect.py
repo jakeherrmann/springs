@@ -19,7 +19,7 @@ def main(argv):
 	if len(argv)>=2:
 		batch_name = argv[1]
 
-	print( list( (Path('.')/'SAVE'/batch_name).glob('*_{:04d}'.format(int(job_name))) ) )
+	print( list( (Path('.')/'..'/'SAVE'/batch_name).glob('*_{:04d}'.format(int(job_name))) ) )
 
 	return
 
