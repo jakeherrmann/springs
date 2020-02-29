@@ -19,6 +19,13 @@ def main(argv):
 	if len(argv)>=2:
 		batch_name = argv[1]
 
+	file_format = Node.get_file_format(
+		2,
+		'double',
+		use_solver_format=False)
+	print( file_format )
+
+	return
 	lung = bio.Lung()
 	for path_job in (Path('.')/'..'/'SAVE'/batch_name).glob('*_{:04d}'.format(int(job_name))):
 		node_positions = []
