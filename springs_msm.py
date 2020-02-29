@@ -132,7 +132,7 @@ def main(argv):
 		num_forces = 2
 		num_cycles = 200
 		iter_total = 0
-		save_folder_name = 'msm_{:d}breath_{:d}D_force{:03.0f}-{:03.0f}'.format(
+		save_folder_name = 'msm_{:d}breath_{:d}D_force{:04.0f}-{:04.0f}'.format(
 			num_cycles,
 			lung.net.num_dimensions,
 			1000*force_min,
