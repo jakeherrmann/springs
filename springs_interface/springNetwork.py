@@ -182,10 +182,10 @@ class SpringNetwork:
 			use_solver_format=use_solver_format)
 		file_format.read_binary_file(file_name, read_springs)
 		if not use_solver_format:
-			file_name = dir_input / 'network_structures.dat'
+			file_name = dir_output / 'network_structures.dat'
 			file_format = Structure.get_file_format()
 			file_format.read_binary_file(file_name, self.structures)
-			file_name = dir_input / 'network_structure_groups.dat'
+			file_name = dir_output / 'network_structure_groups.dat'
 			file_format = StructureGroup.get_file_format()
 			file_format.read_binary_file(file_name, self.structure_groups)
 			file_name = dir_output / 'network_boundaries.dat'
