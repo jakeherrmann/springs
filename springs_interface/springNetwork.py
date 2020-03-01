@@ -148,7 +148,7 @@ class SpringNetwork:
 			with open(file_name,'rt') as file:
 				for line in file.readlines():
 					arg = line.rstrip('\n').split()
-					if   arg[0]=="num_nodes"                : self.num_nodes                      =   int(arg[1])
+					if   arg[0]=="num_points"               : self.num_nodes                      =   int(arg[1])
 					elif arg[0]=="num_springs"              : self.num_springs                    =   int(arg[1])
 					elif arg[0]=="precision"                : self.precision                      =       arg[1]
 					elif arg[0]=="num_dimensions"           : self.num_dimensions                 =   int(arg[1])
