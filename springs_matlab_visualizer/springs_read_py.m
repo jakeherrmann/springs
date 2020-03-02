@@ -36,7 +36,7 @@ fclose( fid ) ;
 
 nodes.position   = zeros( [ network_param.num_points , network_param.num_dimensions ] ) ;
 nodes.force      = zeros( [ network_param.num_points , network_param.num_dimensions ] ) ;
-nodes.fixed      = false( [ network_param.num_points , 1                            ] ) ;
+nodes.fixed      = false( [ network_param.num_points , network_param.num_dimensions ] ) ;
 if ~use_solver_format
 nodes.referenced = false( [ network_param.num_points , 1                            ] ) ;
 end
@@ -58,7 +58,7 @@ fid = fopen( filename ,'rb') ;
 for pp = 1 : network_param.num_points
 	nodes.position(pp,:) = fread( fid , network_param.num_dimensions , network_param.precision ) ;
 	nodes.force(pp,:)    = fread( fid , network_param.num_dimensions , network_param.precision ) ;
-	nodes.fixed(pp)      = fread( fid , 1                            , 'uint8'                 ) ;
+	nodes.fixed(pp,:)    = fread( fid , network_param.num_dimensions , 'uint8'                 ) ;
 	if ~use_solver_format
 	nodes.referenced(pp) = fread( fid , 1                            , 'uint8'                 ) ;
 	end
