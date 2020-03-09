@@ -29,8 +29,8 @@ def main(argv):
 	setup_type = 'hexagon_2D'
 
 	if setup_type=='hexagon_2D':
-		net = spr.make_geom_hexagon_2D([56,48]) ; fix_node = None #282 is top left
-		# net = spr.make_geom_hexagon_2D([56,48])
+		# net = spr.make_geom_hexagon_2D([56,48]) ; fix_node = None #282 is top left
+		net = spr.make_geom_hexagon_2D([35,30])
 		net.precision = 'double' #'float'
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
 		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
@@ -85,7 +85,7 @@ def main(argv):
 	net.solver_algorithm = 'steepest'
 	net.solver_use_sum_net_force = True
 	net.solver_tolerance_change_energy = 0.0
-	net.solver_tolerance_sum_net_force = 1.0E-24
+	net.solver_tolerance_sum_net_force = 1.0E-32
 	net.solver_num_iter_print = 1000
 
 	# net.solver_algorithm = 'newton'
@@ -130,7 +130,7 @@ def main(argv):
 		
 		time_cycle = 5.0
 		num_forces = 2
-		num_cycles = 200
+		num_cycles = 300
 		iter_total = 0
 		save_folder_name = 'msm_{:d}breath_{:d}D_force{:04.0f}-{:04.0f}'.format(
 			num_cycles,
