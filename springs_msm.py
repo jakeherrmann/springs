@@ -149,13 +149,14 @@ def main(args):
 		num_forces = 2
 		num_cycles = 300 #300
 		iter_total = 0
-		save_folder_name = 'msm_{:d}breath_{:d}D_force{:04.0f}-{:04.0f}'.format(
-			num_cycles,
-			lung.net.num_dimensions,
-			1000*force_min,
-			1000*force_max)
+		# save_folder_name = 'msm_{:d}breath_{:d}D_force{:04.0f}-{:04.0f}'.format(
+		# 	num_cycles,
+		# 	lung.net.num_dimensions,
+		# 	1000*force_min,
+		# 	1000*force_max)
+		save_folder_name = 'msm'
 		if job_name:
-			save_folder_name += '_{:04d}'.format(int(job_name))
+			save_folder_name += '_{:06d}'.format(int(job_name))
 		# if ( Path('.')/'..'/save_folder_name ).exists():
 		# 	print('Folder for this simulation already exists.  Exiting.')
 		# 	print(' ')
