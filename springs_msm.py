@@ -2,27 +2,42 @@ import sys
 import random
 import math
 import statistics
+import argparse
+import shutil
 from pathlib import Path
 import numpy as np
 import springs_interface as spr 
 import springs_biology as bio
 
-def main(argv):
+def main(args):
+
+	# input arguments
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--jobname'     , type=str  , default=''        )
+	parser.add_argument('--batchname'   , type=str  , default=''        )
+	parser.add_argument('--forcemin'    , type=float, default=0.000     )
+	parser.add_argument('--forcedelta'  , type=float, default=0.025     )
+	parser.add_argument('--cvrestlength', type=float, default=0.020     )
+	parser.add_argument('--cvstiffness' , type=float, default=0.020     )
+	parser.add_argument('--agentrepair' , type=str  , default='Constant')
+	parser.add_argument('--agentdegrade', type=str  , default='Constant')
+	parser.add_argument('--showdisplays', default=False, action='store_true')
+	parser.add_argument('--savedisplays', default=False, action='store_true')
+	parser.add_argument('--savestretch' , default=False, action='store_true')
+	args = parser.parse_args()
+	job_name               = args.jobname
+	batch_name             = args.batchname
+	show_displays          = args.showdisplays
+	save_displays          = args.savedisplays
+	save_stretch           = args.savestretch
+	force_min              = args.forcemin
+	force_delta            = args.forcedelta
+	cv_stiffness           = args.cvstiffness
+	cv_rest_length         = args.cvrestlength
+	agent_degrade_behavior = args.agentdegrade
+	agent_repair_behavior  = args.agentrepair
 
 	#
-	show_displays = False
-	save_displays = False
-	force_min   = 0.000
-	force_delta = 0.025
-	job_name = ''
-	batch_name = ''
-	if len(argv)>=2:
-		force_min   = float(argv[0])
-		force_delta = float(argv[1])
-	if len(argv)>=3:
-		job_name = argv[2]
-	if len(argv)>=4:
-		batch_name = argv[3]
 	force_max = force_min + force_delta
 
 	# create geometry for spring network and anatomical structures
@@ -30,7 +45,7 @@ def main(argv):
 
 	if setup_type=='hexagon_2D':
 		# net = spr.make_geom_hexagon_2D([56,48]) ; fix_node = None #282 is top left
-		net = spr.make_geom_hexagon_2D([35,30])
+		net = spr.make_geom_hexagon_2D([28,24])
 		net.precision = 'double' #'float'
 		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
 		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
@@ -44,8 +59,8 @@ def main(argv):
 		net.boundaries[3].force_magnitudes = [+0.03] * len(net.boundaries[3].nodes)
 		# add some heterogeneity
 		for spring in net.springs:
-			spring.rest_length *= max(0.1, random.gauss(1.0,0.2))
-			k_mod = max(0.1, random.gauss(1.0,0.2))
+			spring.rest_length *= max(0.1, random.gauss(1.0,cv_rest_length))
+			k_mod = max(0.1, random.gauss(1.0,cv_stiffness))
 			spring.stiffness_tension = [ k*k_mod for k in spring.stiffness_tension ]
 
 	elif setup_type=='truncoct_3D':
@@ -63,8 +78,8 @@ def main(argv):
 		net.boundaries[5].force_magnitudes = [+0.03] * len(net.boundaries[5].nodes)
 		# add some heterogeneity
 		for spring in net.springs:
-			spring.rest_length *= max(0.1, random.gauss(1.0,0.2))
-			k_mod = max(0.1, random.gauss(1.0,0.2))
+			spring.rest_length *= max(0.1, random.gauss(1.0,cv_rest_length))
+			k_mod = max(0.1, random.gauss(1.0,cv_stiffness))
 			spring.stiffness_tension = [ k*k_mod for k in spring.stiffness_tension ]
 
 	elif setup_type=='file':
@@ -118,6 +133,8 @@ def main(argv):
 
 		# note, this adds a fibroblast to every WALL, i.e., both sides of the same septal wall, i.e., two fibroblasts for each structure.
 		lung.add_fibroblast_every_wall()
+		for agent in lung.agents:
+			agent.set_behavior(degrade_behavior=agent_degrade_behavior, repair_behavior=agent_repair_behavior)
 
 		# # for each wall, add opposite side of the septal wall to adjacent_walls
 		# # this allows agents to move through walls
@@ -130,14 +147,15 @@ def main(argv):
 		
 		time_cycle = 5.0
 		num_forces = 2
-		num_cycles = 300
+		num_cycles = 1 #300
 		iter_total = 0
 		save_folder_name = 'msm_{:d}breath_{:d}D_force{:04.0f}-{:04.0f}'.format(
 			num_cycles,
 			lung.net.num_dimensions,
 			1000*force_min,
 			1000*force_max)
-		save_folder_name += '_{:04d}'.format(int(job_name))
+		if job_name:
+			save_folder_name += '_{:04d}'.format(int(job_name))
 		# if ( Path('.')/'..'/save_folder_name ).exists():
 		# 	print('Folder for this simulation already exists.  Exiting.')
 		# 	print(' ')
@@ -154,7 +172,8 @@ def main(argv):
 				delay=None,
 				save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(0) if save_displays else None,
 				show=show_displays)
-		lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+		if save_stretch:
+			lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 		for iter_cycle in range(num_cycles):
 			print(' ')
 			print('{:03d}'.format(iter_cycle))
@@ -163,7 +182,8 @@ def main(argv):
 			for b in net.boundaries:
 				b.force_magnitudes = [force_max] * len(b.nodes)
 			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-			lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+			if save_stretch or (iter_cycle+1)==num_cycles:
+				lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 			spring_strains_in = [ spring.strain for spring in lung.net.springs ]
 			current_stretch = sum(spring_strains_in) / len(spring_strains_in)
 			print( ('IN:  '
@@ -176,7 +196,8 @@ def main(argv):
 			for b in net.boundaries:
 				b.force_magnitudes = [force_min] * len(b.nodes)
 			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-			lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
+			if save_stretch or (iter_cycle+1)==num_cycles:
+				lung.save( Path('.')/'..'/'SAVE'/batch_name/save_folder_name/'STRETCH_{:04d}'.format(iter_total) )
 			spring_strains_ex = [ spring.strain for spring in lung.net.springs ]
 			current_stretch = sum(spring_strains_ex) / len(spring_strains_ex)
 			print( ('EX:  '
@@ -187,7 +208,7 @@ def main(argv):
 			# compute average strain and strain energy rate
 			spring_strains_mean  = [ 0.5*(i+e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
 			spring_strains_delta = [  abs(i-e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
-			spring_strain_energy_rates = [ ((i**2)-(e**2))/time_cycle for i, e in zip(spring_strains_in, spring_strains_ex) ]
+			spring_strain_energy_rates = [ abs((i**2)-(e**2))/time_cycle for i, e in zip(spring_strains_in, spring_strains_ex) ]
 			spring_strain_energy_rates = [ r*(s.rest_length**2)*s.stiffness_tension[0] for s, r in zip(lung.net.springs, spring_strain_energy_rates) ]
 			print( ('{:07.3f} mean average strain, '
 					'{:07.5f} mean average strain energy rate').format(
@@ -202,18 +223,27 @@ def main(argv):
 			# assign inputs to fibroblasts
 			for agent in lung.agents:
 				agent.strain = statistics.mean( [ spring_strains_mean[si] for si in agent.wall.structure.springs_indexes ] )
+				agent.strain_rate = statistics.mean( [ spring_strains_delta[si]/time_cycle for si in agent.wall.structure.springs_indexes ] )
 				agent.strain_energy_rate = statistics.mean( [ spring_strain_energy_rates[si] for si in agent.wall.structure.springs_indexes ] )
+				agent.stiffness = statistics.mean( [ spring.effective_stiffness() for spring in agent.wall.structure.springs ] )
 			lung.agent_actions( time_cycle )
 			lung.net.break_spring('stiffness_tension', 0.0, relop='<=')
 			if show_displays or save_displays:
-				if (iter_cycle+1) % 5 is 0:
+				if (iter_cycle+1) % 1 is 0:
 					bio.display(lung,
 						color_variable='stiffness_tension',
-						color_range=(-0.05,20.0),
+						color_range=(-0.05,10.0),
 						ax_lims=ax_lims,
 						delay=None,
 						save_file_name=Path('.')/'..'/'breath_{:03d}.png'.format(iter_cycle+1) if save_displays else None,
 						show=show_displays)
+
+		# CLEAN UP
+		shutil.rmtree( lung.net.dir_solver_input )
+		shutil.rmtree( lung.net.dir_solver_output )
+
+		# OUTPUTS:
+		# last breath inspiratory & expiratory states (see above lung.save() calls)
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
