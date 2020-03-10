@@ -147,7 +147,7 @@ def main(args):
 		
 		time_cycle = 5.0
 		num_forces = 2
-		num_cycles = 1 #300
+		num_cycles = 300 #300
 		iter_total = 0
 		save_folder_name = 'msm_{:d}breath_{:d}D_force{:04.0f}-{:04.0f}'.format(
 			num_cycles,
