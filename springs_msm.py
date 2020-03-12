@@ -47,8 +47,8 @@ def main(args):
 		# net = spr.make_geom_hexagon_2D([56,48]) ; fix_node = None #282 is top left
 		net = spr.make_geom_hexagon_2D([28,24])
 		net.precision = 'double' #'float'
-		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
-		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
+		net.dir_solver_input  = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
+		net.dir_solver_output = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
 		# net.boundaries[0].fixed = [True] * 2
 		# net.boundaries[1].fixed = [True] * 2
 		# net.boundaries[2].fixed = [True] * 2
@@ -66,8 +66,8 @@ def main(args):
 	elif setup_type=='truncoct_3D':
 		net = spr.make_geom_truncoct_3D([6,6,6], split_walls_into_triangles=False)
 		net.precision = 'double'
-		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
-		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
+		net.dir_solver_input  = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
+		net.dir_solver_output = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
 		# net.boundaries[0].fixed = [True] * 3
 		# net.boundaries[1].fixed = [True] * 3
 		net.boundaries[0].force_magnitudes = [+0.03] * len(net.boundaries[0].nodes)
@@ -85,8 +85,8 @@ def main(args):
 	elif setup_type=='file':
 		net = spr.SpringNetwork()
 		net.read_spring_network(Path('.')/'..'/'TEST', reinitialize=True)
-		net.dir_solver_input   = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
-		net.dir_solver_output  = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
+		net.dir_solver_input  = Path('.')/'..'/'SOLVER_DATA'/job_name/'INPUT'
+		net.dir_solver_output = Path('.')/'..'/'SOLVER_DATA'/job_name/'OUTPUT'
 
 	else:
 		print( 'UKNOWN SETUP' )
@@ -240,8 +240,7 @@ def main(args):
 						show=show_displays)
 
 		# CLEAN UP
-		shutil.rmtree( lung.net.dir_solver_input )
-		shutil.rmtree( lung.net.dir_solver_output )
+		shutil.rmtree( lung.net.dir_solver_input.parent )
 
 		# OUTPUTS:
 		# last breath inspiratory & expiratory states (see above lung.save() calls)
