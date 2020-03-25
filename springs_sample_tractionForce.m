@@ -18,7 +18,7 @@ num_col = 15 ;
 k_mean = 1.0 ;
 k_stdv = 0.0 ;
 L0_mean = 1.0 ;
-L0_stdv = 0.2 ;
+L0_stdv = 0.0 ;
 
 %% PREPROCESS
 
@@ -144,8 +144,8 @@ nodes_eq.force( rand_node_ind ,:) = bsxfun(@times, rand_force_mag , [cos(rand_fo
 
 %% DISPLAY
 
-h_before = display_2D( nodes_eq       , springs , 'stiffness_tension' , [0,2] , parula(10) , true ) ;
-h_after  = display_2D( nodes_eq_force , springs , 'stiffness_tension' , [0,2] , parula(10) , true ) ;
+h_before = display_2D( nodes_eq       , springs , springs_tension(nodes_eq      ,springs) , [0,0.2] , parula(10) , true ) ;
+h_after  = display_2D( nodes_eq_force , springs , springs_tension(nodes_eq_force,springs) , [0,0.2] , parula(10) , true ) ;
 linkaxes( [h_before.ax,h_after.ax] , 'xy' ) ;
 
 %%
