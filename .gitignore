@@ -6,3 +6,7 @@
 *.pyc
 .DS_Store
 test_*
+dev_*
+user_*
+springs_input
+springs_output

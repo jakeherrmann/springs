@@ -39,12 +39,13 @@ public:
 	std::size_t num_stiffness_compression = 0 ;
 	//
 	std::string algorithm = "newton" ;
+	std::string objective = "energy" ;
 	std::size_t num_iter_save  = 0 ;
 	std::size_t num_iter_print = 0 ;
 	std::size_t num_iter_max   = 0 ;
-	bool use_sum_net_force = false ;
+	bool include_force_fixed_nodes = false ;
 	bool use_numerical_hessian = false ;
-	double tolerance_change_energy = 1.0e-12 ;
+	double tolerance_change_objective = 1.0e-12 ;
 	double tolerance_sum_net_force = 1.0e-12 ;
 
 	//
@@ -151,27 +152,29 @@ private:
 	Vector<T,N> scale_position_range ;
 	//
 	std::string algorithm ;
+	std::string objective ;
 	std::size_t num_iter_save ;
 	std::size_t num_iter_print ;
 	std::size_t num_iter_max ;
-	bool use_sum_net_force ;
+	bool include_force_fixed_nodes ;
 	bool use_numerical_hessian ;
-	T tolerance_change_energy ;
+	T tolerance_change_objective ;
 	T tolerance_sum_net_force ;
 	T sum_net_force_magnitude ;
+	T max_net_force_magnitude ;
 	std::vector<T> neg_gradient ;
 	std::vector<T> step_direction ;
 	spmat<T> hessian ;
 public:
 	//
-	T total_energy( const bool & ) ;
+	T total_energy( void ) ;
 	void move_points_newton( const T & ) ;
 	void move_points_force( const T & ) ;
 	void move_points_rand( const T & ) ;
 	bool test_reboot( void ) ;
 	bool accept_new_points( const T & , const T & ) ;
 	void find_max_spring_length( void ) ;
-	T heat_up( const T & , const T &, const bool & ) ;
+	T heat_up( const T & , const T & ) ;
 	void solve( void ) ;
 	void anneal( void ) ;
 	void minimize_energy( void ) ;

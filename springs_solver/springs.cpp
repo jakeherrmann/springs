@@ -8,6 +8,7 @@
 
 #include "springs.hpp"
 #include "vectors_nd.hpp"
+#include "klein_summer.hpp"
 #include "spmat.hpp"
 
 #include <algorithm>
@@ -74,20 +75,21 @@ void NetworkParameters::load_parameters( const char * file_name )
 			std::cout << "COULD NOT OPEN FILE:\n" << file_name << std::endl ;
 		} else {
 			while( file >> arg >> val ) {
-				if( arg=="num_points"                ) { num_points                = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="num_springs"               ) { num_springs               = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="precision"                 ) { precision                 =                                    val   ; } else
-				if( arg=="num_dimensions"            ) { num_dimensions            = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="num_stiffness_tension"     ) { num_stiffness_tension     = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="num_stiffness_compression" ) { num_stiffness_compression = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="algorithm"                 ) { algorithm                 =                                    val   ; } else
-				if( arg=="num_iter_save"             ) { num_iter_save             = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="num_iter_print"            ) { num_iter_print            = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="num_iter_max"              ) { num_iter_max              = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="use_sum_net_force"         ) { use_sum_net_force         =        static_cast<bool>(std::stod(val)) ; } else
-				if( arg=="use_numerical_hessian"     ) { use_numerical_hessian     =        static_cast<bool>(std::stod(val)) ; } else
-				if( arg=="tolerance_change_energy"   ) { tolerance_change_energy   =                          std::stod(val)  ; } else
-				if( arg=="tolerance_sum_net_force"   ) { tolerance_sum_net_force   =                          std::stod(val)  ; }
+				if( arg=="num_points"                 ) { num_points                 = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="num_springs"                ) { num_springs                = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="precision"                  ) { precision                  =                                    val   ; } else
+				if( arg=="num_dimensions"             ) { num_dimensions             = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="num_stiffness_tension"      ) { num_stiffness_tension      = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="num_stiffness_compression"  ) { num_stiffness_compression  = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="algorithm"                  ) { algorithm                  =                                    val   ; } else
+				if( arg=="objective"                  ) { objective                  =                                    val   ; } else
+				if( arg=="num_iter_save"              ) { num_iter_save              = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="num_iter_print"             ) { num_iter_print             = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="num_iter_max"               ) { num_iter_max               = static_cast<std::size_t>(std::stoi(val)) ; } else
+				if( arg=="include_force_fixed_nodes"  ) { include_force_fixed_nodes  =        static_cast<bool>(std::stod(val)) ; } else
+				if( arg=="use_numerical_hessian"      ) { use_numerical_hessian      =        static_cast<bool>(std::stod(val)) ; } else
+				if( arg=="tolerance_change_objective" ) { tolerance_change_objective =                          std::stod(val)  ; } else
+				if( arg=="tolerance_sum_net_force"    ) { tolerance_sum_net_force    =                          std::stod(val)  ; }
 				else { std::cout << "Parameter not recognized: " << arg << std::endl ; }
 			}
 			file.close() ;
@@ -104,20 +106,21 @@ void NetworkParameters::save_parameters( const char * file_name )
 		if( !file ) {
 			std::cout << "COULD NOT OPEN FILE:\n" << file_name << std::endl ;
 		} else {
-			file << "num_points"                << ' ' << num_points                << '\n'
-				 << "num_springs"               << ' ' << num_springs               << '\n'
-				 << "precision"                 << ' ' << precision                 << '\n'
-				 << "num_dimensions"            << ' ' << num_dimensions            << '\n'
-				 << "num_stiffness_tension"     << ' ' << num_stiffness_tension     << '\n'
-				 << "num_stiffness_compression" << ' ' << num_stiffness_compression << '\n'
-				 << "algorithm"                 << ' ' << algorithm                 << '\n'
-				 << "num_iter_save"             << ' ' << num_iter_save             << '\n'
-				 << "num_iter_print"            << ' ' << num_iter_print            << '\n'
-				 << "num_iter_max"              << ' ' << num_iter_max              << '\n'
-				 << "use_sum_net_force"         << ' ' << use_sum_net_force         << '\n'
-				 << "use_numerical_hessian"     << ' ' << use_numerical_hessian     << '\n'
-				 << "tolerance_change_energy"   << ' ' << tolerance_change_energy   << '\n'
-				 << "tolerance_sum_net_force"   << ' ' << tolerance_sum_net_force ;
+			file << "num_points"                 << ' ' << num_points                 << '\n'
+				 << "num_springs"                << ' ' << num_springs                << '\n'
+				 << "precision"                  << ' ' << precision                  << '\n'
+				 << "num_dimensions"             << ' ' << num_dimensions             << '\n'
+				 << "num_stiffness_tension"      << ' ' << num_stiffness_tension      << '\n'
+				 << "num_stiffness_compression"  << ' ' << num_stiffness_compression  << '\n'
+				 << "algorithm"                  << ' ' << algorithm                  << '\n'
+				 << "objective"                  << ' ' << objective                  << '\n'
+				 << "num_iter_save"              << ' ' << num_iter_save              << '\n'
+				 << "num_iter_print"             << ' ' << num_iter_print             << '\n'
+				 << "num_iter_max"               << ' ' << num_iter_max               << '\n'
+				 << "include_force_fixed_nodes"  << ' ' << include_force_fixed_nodes  << '\n'
+				 << "use_numerical_hessian"      << ' ' << use_numerical_hessian      << '\n'
+				 << "tolerance_change_objective" << ' ' << tolerance_change_objective << '\n'
+				 << "tolerance_sum_net_force"    << ' ' << tolerance_sum_net_force ;
 			file.close() ;
 		}
 	}
@@ -230,14 +233,15 @@ template< class T , std::size_t N >
 void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters )
 {
 	//
-	algorithm               = network_parameters.algorithm ;
-	num_iter_save           = network_parameters.num_iter_save ;
-	num_iter_print          = network_parameters.num_iter_print ;
-	num_iter_max            = network_parameters.num_iter_max ;
-	use_sum_net_force       = network_parameters.use_sum_net_force ;
-	use_numerical_hessian   = network_parameters.use_numerical_hessian ;
-	tolerance_change_energy = network_parameters.tolerance_change_energy ;
-	tolerance_sum_net_force = network_parameters.tolerance_sum_net_force ;
+	algorithm                  = network_parameters.algorithm ;
+	objective                  = network_parameters.objective ;
+	num_iter_save              = network_parameters.num_iter_save ;
+	num_iter_print             = network_parameters.num_iter_print ;
+	num_iter_max               = network_parameters.num_iter_max ;
+	include_force_fixed_nodes  = network_parameters.include_force_fixed_nodes ;
+	use_numerical_hessian      = network_parameters.use_numerical_hessian ;
+	tolerance_change_objective = network_parameters.tolerance_change_objective ;
+	tolerance_sum_net_force    = network_parameters.tolerance_sum_net_force ;
 	//
 	dir_input           = network_parameters.dir_input ;
 	dir_output          = network_parameters.dir_output ;
@@ -542,13 +546,19 @@ void SpringNetwork<T,N>::find_max_spring_length( void )
 
 ///____________________ total_energy ____________________///
 template< class T , std::size_t N >
-T SpringNetwork<T,N>::total_energy( const bool & use_sum_net_force )
+T SpringNetwork<T,N>::total_energy( void )
 {
+	// using klein summation, modification of kahan summation,
+	// to account for floating point precision issues with sums
+	// of many small numbers, or small + large numbers
+	KleinSummer<T> ksum ;
+
 	// internal energy due to spring tension/compression
-	T energy = static_cast<T>(0) ;
+	ksum.reset() ;
 	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-		energy += s->spring_energy() ;
+		ksum.add( s->spring_energy() ) ;
 	}
+	T energy = ksum.result() ;
 	
 	/*
 	// external work done by applied loads
@@ -586,26 +596,39 @@ T SpringNetwork<T,N>::total_energy( const bool & use_sum_net_force )
 
 	// net force on each point (including fixed points!)
 	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
-		p->net_force = p->force_applied ;
+		p->net_force = static_cast<T>(0.0) ;
 	}
 	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 		s->start->net_force += s->get_force() ;
 		s->end->net_force   -= s->get_force() ;
 	}
-	sum_net_force_magnitude = static_cast<T>(0) ;
 	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
+		p->net_force += p->force_applied ;
 		p->net_force_magnitude = p->net_force.norm() ;
-		if( !p->not_referenced ) {
-			sum_net_force_magnitude += p->net_force_magnitude ;
+	}
+	ksum.reset() ;
+	max_net_force_magnitude = static_cast<T>(0.0) ;
+	if( include_force_fixed_nodes ) {
+		for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
+			if( !p->not_referenced ) {
+				max_net_force_magnitude = ( p->net_force_magnitude > max_net_force_magnitude ) ? p->net_force_magnitude : max_net_force_magnitude ;
+				ksum.add( p->net_force_magnitude ) ;
+			}
+		}
+	} else {
+		for( iterNode n = nodes.begin() ; n != nodes.end() ; ++n ) {
+			max_net_force_magnitude = ( n->point->net_force_magnitude > max_net_force_magnitude ) ? n->point->net_force_magnitude : max_net_force_magnitude ;
+			ksum.add( n->point->net_force_magnitude ) ;
 		}
 	}
+	sum_net_force_magnitude = ksum.result() ;
 
 	//energy += ( sum_net_force_magnitude * scale_length ) ;
-	if( use_sum_net_force ) {
-		return sum_net_force_magnitude ;
-	} else {
-		return energy ;
-	}
+
+	if( objective=="energy"   ) { return energy                  ; } else
+	if( objective=="sumforce" ) { return sum_net_force_magnitude ; } else
+	if( objective=="maxforce" ) { return max_net_force_magnitude ; }
+	else { return static_cast<T>(0.0) ; }
 }
 
 ///__________________ compute_gradient __________________///
@@ -615,7 +638,7 @@ void SpringNetwork<T,N>::compute_gradient( void )
 	// evalute net force at each node (gradient of total spring network energy)
 	std::size_t num_node = nodes.size() ;
 	neg_gradient.resize( N*num_node ) ;
-	total_energy(false) ;
+	total_energy() ;
 	iterNode n ;
 	iterNode n_end ;
 	std::size_t d ;
@@ -911,14 +934,14 @@ bool SpringNetwork<T,N>::accept_new_points( const T & delta_energy , const T & t
 
 ///______________________  heat_up ______________________///
 template< class T , std::size_t N >
-T SpringNetwork<T,N>::heat_up( const T & amplitude , const T & num_config_test , const bool & use_sum_net_force )
+T SpringNetwork<T,N>::heat_up( const T & amplitude , const T & num_config_test )
 {
 	T energy = static_cast<T>(0) ;
 	T energy_max = std::numeric_limits<T>::min() ;
 	points_prev = points ;
 	for( std::size_t i = 0 ; i < num_config_test ; ++i ) {
 		move_points_rand( amplitude ) ;
-		energy = total_energy( use_sum_net_force ) ;
+		energy = total_energy() ;
 		if( energy > energy_max ) {
 			energy_max = energy ;
 		}
@@ -934,7 +957,7 @@ void SpringNetwork<T,N>::minimize_energy( void )
 	// copy current state to initial, previous, and best states
 	points_init = points ;
 	points_prev = points ;
-	T energy = total_energy(use_sum_net_force) ;
+	T energy = total_energy() ;
 	T energy_init = energy ;
 	T energy_prev = energy ;
 
@@ -956,8 +979,8 @@ void SpringNetwork<T,N>::minimize_energy( void )
 	std::size_t local_num_iter_max   = ( num_iter_max   > 0 ) ? num_iter_max   : 500000 ;
 	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :      0 ;
 	std::size_t local_num_iter_print = ( num_iter_print > 0 ) ? num_iter_print :    200 ;
-	T local_tolerance_sum_net_force = ( tolerance_sum_net_force > 0.0 ) ? tolerance_sum_net_force : 1E-12 ;
-	T local_tolerance_change_energy = ( tolerance_change_energy > 0.0 ) ? tolerance_change_energy : 1E-12 ;
+	T local_tolerance_sum_net_force    = ( tolerance_sum_net_force    > 0.0 ) ? tolerance_sum_net_force : 1E-12 ;
+	T local_tolerance_change_objective = ( tolerance_change_objective > 0.0 ) ? tolerance_change_objective : 1E-12 ;
 
 	//
 	std::cout
@@ -988,8 +1011,16 @@ void SpringNetwork<T,N>::minimize_energy( void )
 			step_size *= step_size_reduction ;
 			points = points_prev ;
 			move_points_force( step_size ) ;
-			energy = total_energy(use_sum_net_force) ; // also computes sum_net_force_magnitude
-		} while( (energy>=energy_prev) && (step_size>step_size_min) ) ;
+			energy = total_energy() ; // also computes sum_net_force_magnitude
+		} while( (energy>energy_prev) && (step_size>step_size_min) ) ;
+		/*
+		while( energy == energy_prev ) {
+			step_size /= step_size_reduction ;
+			points = points_prev ;
+			move_points_force( step_size ) ;
+			energy = total_energy() ; // also computes sum_net_force_magnitude
+		}
+		//*/
 
 		//
 		change_energy = (energy_prev-energy) / (energy_init-energy_prev) ;
@@ -1019,7 +1050,7 @@ void SpringNetwork<T,N>::minimize_energy( void )
 
 		// stopping condition
 		if(    (sum_net_force_magnitude<local_tolerance_sum_net_force)
-			|| (change_energy<local_tolerance_change_energy)
+			|| (change_energy<local_tolerance_change_objective)
 			|| (step_size<=step_size_min)
 			|| (num_iter_zero_change>num_iter_zero_change_max) )
 		{
@@ -1048,7 +1079,7 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 	// copy current state to initial, previous, and best states
 	points_init = points ;
 	points_prev = points ;
-	T energy = total_energy(use_sum_net_force) ;
+	T energy = total_energy() ;
 	T energy_init = energy ;
 	T energy_prev = energy ;
 
@@ -1065,8 +1096,8 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 	std::size_t local_num_iter_max   = ( num_iter_max   > 0 ) ? num_iter_max   : 500 ;
 	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :   0 ;
 	std::size_t local_num_iter_print = ( num_iter_print > 0 ) ? num_iter_print :   1 ;
-	T local_tolerance_sum_net_force = ( tolerance_sum_net_force > 0.0 ) ? tolerance_sum_net_force : 1E-12 ;
-	T local_tolerance_change_energy = ( tolerance_change_energy > 0.0 ) ? tolerance_change_energy : 1E-12 ;
+	T local_tolerance_sum_net_force    = ( tolerance_sum_net_force    > 0.0 ) ? tolerance_sum_net_force    : 1E-12 ;
+	T local_tolerance_change_objective = ( tolerance_change_objective > 0.0 ) ? tolerance_change_objective : 1E-12 ;
 
 	//
 	std::cout
@@ -1091,7 +1122,7 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 			step_size = ( step_size > step_size_max ) ? step_size_max : step_size ;
 			points = points_prev ;
 			move_points_newton( step_size ) ;
-			energy = total_energy(use_sum_net_force) ; // also computes sum_net_force_magnitude
+			energy = total_energy() ; // also computes sum_net_force_magnitude
 		} while( (energy>=energy_prev) && (step_size>step_size_min) ) ;
 
 		//
@@ -1122,7 +1153,7 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 
 		// stopping condition
 		if(    (sum_net_force_magnitude<local_tolerance_sum_net_force)
-			|| (change_energy<local_tolerance_change_energy)
+			|| (change_energy<local_tolerance_change_objective)
 			|| (step_size<=step_size_min)
 			|| (num_iter_zero_change>num_iter_zero_change_max) )
 		{
@@ -1152,7 +1183,7 @@ void SpringNetwork<T,N>::anneal( void )
 	points_init = points ;
 	points_prev = points ;
 	points_best = points ;
-	T energy = total_energy(use_sum_net_force) ;
+	T energy = total_energy() ;
 	//T energy_init = energy ;
 	T energy_prev = energy ;
 	T energy_best = energy ;
@@ -1161,8 +1192,8 @@ void SpringNetwork<T,N>::anneal( void )
 	std::size_t local_num_iter_max   = ( num_iter_max   > 0 ) ? num_iter_max   : 500000 ;
 	std::size_t local_num_iter_save  = ( num_iter_save  > 0 ) ? num_iter_save  :      0 ;
 	std::size_t local_num_iter_print = ( num_iter_print > 0 ) ? num_iter_print :   5000 ;
-	T local_tolerance_sum_net_force = ( tolerance_sum_net_force > 0.0 ) ? tolerance_sum_net_force : 1E-12 ;
-	T local_tolerance_change_energy = ( tolerance_change_energy > 0.0 ) ? tolerance_change_energy : 1E-12 ;
+	T local_tolerance_sum_net_force    = ( tolerance_sum_net_force    > 0.0 ) ? tolerance_sum_net_force    : 1E-12 ;
+	T local_tolerance_change_objective = ( tolerance_change_objective > 0.0 ) ? tolerance_change_objective : 1E-12 ;
 
 	// annealing solver parameters
 	// TODO // get these parameters from NetworkParameters? (default/file)
@@ -1172,6 +1203,7 @@ void SpringNetwork<T,N>::anneal( void )
 	T energy_compare ;
 	T energy_compare_min = static_cast<T>(1E-12) ;
 	T relative_change_energy ;
+	T mean_energy_change = static_cast<T>(0.0) ;
 	//std::size_t num_iter_heatup = local_num_iter_max / 5 ;
 	std::size_t num_consecutive_reject     =   0 ;
 	std::size_t num_consecutive_reject_max = 200 ;
@@ -1188,7 +1220,7 @@ void SpringNetwork<T,N>::anneal( void )
 	// equivalent to 1/e probability to accept energy difference
 	T heatup_amplitude = 0.01 ;
 	std::size_t heatup_num_config = 1000 ;
-	energy_compare = heat_up( heatup_amplitude , heatup_num_config , use_sum_net_force ) ;
+	energy_compare = heat_up( heatup_amplitude , heatup_num_config ) ;
 	energy_compare = ( energy_compare > energy_compare_min ) ? energy_compare : energy_compare_min ;
 	T temperature = std::fabs( energy_compare - energy_best ) ;
 
@@ -1208,7 +1240,7 @@ void SpringNetwork<T,N>::anneal( void )
 		// test a new configuration, force-driven or random
 		move_points_force( step_size ) ;
 		//move_points_rand( step_size * 1E-5 ) ;
-		energy = total_energy(use_sum_net_force) ; // also computes sum_net_force_magnitude
+		energy = total_energy() ; // also computes sum_net_force_magnitude
 
 		// if configuration is too extreme, reset network to best
 		reboot = test_reboot() ;
@@ -1223,7 +1255,7 @@ void SpringNetwork<T,N>::anneal( void )
 
 		//
 		relative_change_energy = std::fabs( energy - energy_prev ) / energy_compare ;
-		if( relative_change_energy < local_tolerance_change_energy ) {
+		if( relative_change_energy < local_tolerance_change_objective ) {
 			++num_small_change ;
 		}
 		
@@ -1231,6 +1263,7 @@ void SpringNetwork<T,N>::anneal( void )
 		// accepting decreased energy is guaranteed
 		// accepting increased energy is more likely at high temperatures
 		if( energy < energy_best ) {
+			mean_energy_change += (energy-energy_prev) ;
 			step_size /= step_size_reduction ;
 			points_best = points ;
 			points_prev = points ;
@@ -1240,6 +1273,7 @@ void SpringNetwork<T,N>::anneal( void )
 			num_since_last_best = 0 ;
 		}
 		else if( accept_new_points( energy-energy_prev , temperature ) ) {
+			mean_energy_change += (energy-energy_prev) ;
 			points_prev = points ;
 			energy_prev = energy ;
 			num_consecutive_reject = 0 ;
@@ -1252,16 +1286,18 @@ void SpringNetwork<T,N>::anneal( void )
 		}
 
 		if( (local_num_iter_print>0) && (iter%local_num_iter_print==0) ) {
+			mean_energy_change /= static_cast<T>(local_num_iter_print) ;
 			std::cout
 				<< std::setprecision(3)
 				<< std::scientific
 				<< "  " << std::setw(10) << energy_best
 				<< "  " << std::setw(10) << energy
 				<< "  " << std::setw(10) << energy_prev
-				<< "  " << std::setw(10) << energy-energy_prev
+				<< "  " << std::setw(10) << mean_energy_change
 				<< "  " << std::setw(10) << step_size
 				<< "  " << std::setw(10) << sum_net_force_magnitude
 				<< std::endl ;
+			mean_energy_change = static_cast<T>(0.0) ;
 		}
 		
 		if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
@@ -1309,7 +1345,7 @@ void SpringNetwork<T,N>::anneal( void )
 			case 3: heatup_amplitude = 0.02 ; heatup_num_config = 2000 ; break ;
 			case 4: heatup_amplitude = 0.05 ; heatup_num_config = 5000 ; break ;
 			}
-			energy_best = heat_up( heatup_amplitude , heatup_num_config , use_sum_net_force ) ;
+			energy_best = heat_up( heatup_amplitude , heatup_num_config ) ;
 			iter += heatup_num_config ;
 			points_prev = points ;
 			energy_prev = energy ;

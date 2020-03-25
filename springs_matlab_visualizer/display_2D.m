@@ -6,21 +6,28 @@ function varargout = display_2D( nodes , springs , varargin )
 % display_2D( nodes , springs , color_variable , color_range ) plots all springs with color
 % determined according to color_variable linearly within min/max of color_range.  Color_variable
 % may be either a string corresponding to a field of springs data structure, or it may be an array
-% of size NS x 1 where NS is the number of springs.
+% of size NS x 1 where NS is the number of springs. Default color_range is [0,1].  Default variable
+% is none.
 %
 % display_2D( nodes , springs , color_variable , color_range , color_map ) plots all springs
 % with the number of colors NC, and RGB values of each color, specified as an NC x 3 array
-% color_map.
+% color_map. Default is jet(10)
+%
+% display_2D( nodes , springs , color_variable , color_range , color_map , show_forces ) also plots
+% the external applied force at each node with black arrows, scaled by the largest force magnitude,
+% if show_forces is true.  Default is false.
 %
 % Example:
-% display_2D( nodes , springs , 'stiffness_tension' , [0,1] , jet(11) )
+% display_2D( nodes , springs , 'stiffness_tension' , [0,1] , jet(11) , true )
 %
 
 % default parameters
 color_variable = '' ;
 color_range = [0,1] ;
 color_map = jet(10) ;
+show_forces = false ;
 
+% user-defined parameters
 if numel(varargin) > 0
 	color_variable = varargin{1} ;
 end
@@ -30,6 +37,9 @@ if numel(varargin) > 1
 end
 if numel(varargin) > 2
 	color_map = varargin{3} ;
+end
+if numel(varargin) > 3
+	show_forces = varargin{4} ;
 end
 
 % group springs according to color_variable
@@ -81,6 +91,24 @@ for ii = 1 : size(color_map,1)
 			'Color' , color_map(ii,:) , ...
 			'LineWidth' , 2 ) ;
 	end
+end
+
+if show_forces
+	force_mag_sq = sum(power( nodes.force ,2),2) ;
+	ind = (force_mag_sq>0) & (force_mag_sq>(1e-3*max(force_mag_sq))) ;
+	force_scaled = nodes.force(ind,:) / sqrt(max(force_mag_sq)) ;
+	orthog = force_scaled * [0,-1;+1,0] ;
+	aa = 0.6 ;
+	xx = bsxfun(@plus, nodes.position(ind,1) , bsxfun(@times, force_scaled(:,1) , [0,1,aa,1,aa] ) + bsxfun(@times, orthog(:,1) , 0.7*(1-aa)*[0,0,+1,0,-1] ) ) ;
+	yy = bsxfun(@plus, nodes.position(ind,2) , bsxfun(@times, force_scaled(:,2) , [0,1,aa,1,aa] ) + bsxfun(@times, orthog(:,2) , 0.7*(1-aa)*[0,0,+1,0,-1] ) ) ;
+	xx(:,end+1) = nan ;
+	yy(:,end+1) = nan ;
+	plot( ...
+		reshape( xx' ,[],1) , ...
+		reshape( yy' ,[],1) , ...
+		'-' , ...
+		'Color' , [0,0,0] , ...
+		'LineWidth' , 1 ) ;
 end
 
 axis tight

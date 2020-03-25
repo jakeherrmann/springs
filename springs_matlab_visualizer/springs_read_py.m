@@ -18,8 +18,12 @@ numeric_args = {
 	'num_iter_save'
 	'num_iter_print'
 	'num_iter_max'
-	'tolerance_change_energy'
+	'tolerance_change_objective'
 	'tolerance_sum_net_force'
+	} ;
+bool_args = {
+	'include_force_fixed_nodes'
+	'use_numerical_hessian'
 	} ;
 	
 filename = file_parameters ;
@@ -29,7 +33,10 @@ while ~feof( fid )
 	val = strtrim(val) ;
 	if ismember( arg , numeric_args )
 		val = str2num(val) ;
+	elseif ismember( arg , bool_args )
+		val = logical(str2num(val)) ;
 	end
+	
 	network_param.(arg) = val ; 
 end
 fclose( fid ) ;
