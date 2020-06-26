@@ -95,10 +95,14 @@ for ii = 1 : size(color_map,1)
 	end
 end
 
+axis tight
+axis_size = max( range(xlim()) , range(ylim()) ) ;
+
 if show_forces
 	force_mag_sq = sum(power( nodes.force ,2),2) ;
 	ind = (force_mag_sq>0) & (force_mag_sq>(1e-3*max(force_mag_sq))) ;
 	force_scaled = nodes.force(ind,:) / sqrt(max(force_mag_sq)) ;
+	force_scaled = force_scaled * axis_size ;
 	orthog = force_scaled * [0,-1;+1,0] ;
 	aa = 0.6 ;
 	xx = bsxfun(@plus, nodes.position(ind,1) , bsxfun(@times, force_scaled(:,1) , [0,1,aa,1,aa] ) + bsxfun(@times, orthog(:,1) , 0.7*(1-aa)*[0,0,+1,0,-1] ) ) ;
