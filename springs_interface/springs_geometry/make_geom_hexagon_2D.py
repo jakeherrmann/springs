@@ -74,9 +74,7 @@ def make_geom_hexagon_2D(geom_size=[1,1]):
 			nodes_regions[n].append( region_index )
 	regions_structures = [ [] for r in vor.regions ]
 	for structure_index, structure in enumerate(structures):
-		#for node_index in structure.nodes_indexes:
-		node_index = structure.nodes_indexes[0]
-		for region_index in nodes_regions[node_index]:
+		for region_index in nodes_regions[ structure.nodes_indexes[0] ]:
 			if all( n in regions_nodes_indexes[region_index] for n in structure.nodes_indexes ):
 				regions_structures[region_index].append( structure_index )
 	structure_groups = [ StructureGroup(structures_indexes=rs) for rs in regions_structures if len(rs) > 1 ]
