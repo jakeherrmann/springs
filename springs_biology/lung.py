@@ -69,5 +69,9 @@ class Lung:
 					elif any( n in other_wall.structure.nodes for n in wall.structure.nodes ):
 						other_wall.adjacent_walls.append( wall )
 
-
+	def remove_agent(self, agent):
+		for wall in self.walls:
+			if agent in wall.agents:
+				wall.agents.remove(agent)
+		self.agents.remove(agent)
 
