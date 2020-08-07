@@ -71,8 +71,8 @@ boundary = {
 	find(ismember(loc(:,1),num_row))
 	find(ismember(loc(:,2),1      ))
 	find(ismember(loc(:,2),num_col))
-	find(ismember(loc(:,2),1      ))
-	find(ismember(loc(:,2),num_lay))
+	find(ismember(loc(:,3),1      ))
+	find(ismember(loc(:,3),num_lay))
 	} ;
 boundary{3} = setdiff( boundary{3} , [boundary{1};boundary{2}] ) ;
 boundary{4} = setdiff( boundary{4} , [boundary{1};boundary{2}] ) ;
