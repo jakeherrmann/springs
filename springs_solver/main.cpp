@@ -13,12 +13,18 @@
 #include <string>
 #include <memory>
 
-#ifdef WINDOWS
+#ifdef _WIN32
 	#include <direct.h>
 	#define get_current_dir _getcwd
 #else
 	#include <unistd.h>
 	#define get_current_dir getcwd
+#endif
+
+#ifdef _WIN32
+	#define FILESEP '\\'
+#else
+	#define FILESEP '/'
 #endif
 
 #include "springs.hpp"
@@ -65,21 +71,21 @@ int main( int argc , const char * argv[] ) {
 	//*/
 
 	// input/output locations
-	std::string dir_input  = "../../INPUT/" ;
+	std::string dir_input  = std::string("")+".."+FILESEP+".."+FILESEP+"INPUT"+FILESEP ;
 	std::string dir_output ;
 	if( argc > 1 ) {
 		dir_input = std::string( argv[1] ) ;
-		if( dir_input.back() != '/' ) {
-			dir_input += '/' ;
+		if( dir_input.back() != FILESEP ) {
+			dir_input += FILESEP ;
 		}
 	}
 	if( argc > 2 ) {
 		dir_output = std::string( argv[2] ) ;
-		if( dir_output.back() != '/' ) {
-			dir_output += '/' ;
+		if( dir_output.back() != FILESEP ) {
+			dir_output += FILESEP ;
 		}
 	} else {
-		dir_output = dir_input.substr(0,dir_input.length()-1) + "_OUTPUT/" ;
+		dir_output = dir_input.substr(0,dir_input.length()-1) + "_OUTPUT"+FILESEP ;
 	}
 	
 	std::cout << "\n0.  Parameters" << std::endl ;

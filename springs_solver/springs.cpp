@@ -24,9 +24,11 @@
 #include <memory>
 #include <cstdint>
 
+#include <thread>
+
 #include <sys/stat.h>
 
-#ifdef WINDOWS
+#ifdef _WIN32
 	#define FILESEP '\\'
 #else
 	#define FILESEP '/'
