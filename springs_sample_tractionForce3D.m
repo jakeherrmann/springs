@@ -140,7 +140,7 @@ options.tolerance_sum_net_force = 1e-24 ;
 %% ADD FORCES AND RESOLVE EQUILIBRIUM
 
 % select a few random nodes (not on boundary) and apply random forces
-num_rand_force = 20 ;
+num_rand_force = 200 ;
 magnitude = 0.4 ;
 free_node_ind = find( ~any( nodes_eq.fixed ,2) ) ;
 rand_node_ind = free_node_ind( randperm( numel(free_node_ind) ,num_rand_force) ) ;

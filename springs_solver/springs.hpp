@@ -83,6 +83,7 @@ public:
 	T effective_stiffness ;
 	T length ;
 	T rest_length ;
+	T energy ;
 	Vector<T,N> force ;
 	bool allow_compression ;
 public:
@@ -165,6 +166,9 @@ private:
 	std::vector<T> neg_gradient ;
 	std::vector<T> step_direction ;
 	spmat<T> hessian ;
+	//
+	bool parallelism_enabled = true ;
+	std::size_t num_threads ;
 public:
 	//
 	T total_energy( void ) ;

@@ -25,6 +25,7 @@
 #include <cstdint>
 
 #include <thread>
+#include <omp.h>
 
 #include <sys/stat.h>
 
@@ -156,7 +157,7 @@ T Spring<T,N>::spring_energy( void )
 	length = delta_position.norm() ;
 	T delta_length = length - rest_length ;
 	T force_magnitude = static_cast<T>(0) ;
-	T energy = static_cast<T>(0) ;
+	energy = static_cast<T>(0) ;
 	effective_stiffness = static_cast<T>(0) ;
 	if( delta_length > 0 ) {
 		T force_component ;
@@ -266,6 +267,10 @@ void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters )
 	nodes   = std::vector<        Node >( num_points  ) ;
 	load_network_binary( file_input_nodes.c_str() , file_input_springs.c_str() ) ;
 	construct_network() ;
+	//
+	parallelism_enabled = true ;
+	num_threads = std::thread::hardware_concurrency() ;
+	std::cout << num_threads << " concurrent threads supported." << std::endl ;
 	//
 	return ;
 }
@@ -556,12 +561,23 @@ T SpringNetwork<T,N>::total_energy( void )
 	KleinSummer<T> ksum ;
 
 	// internal energy due to spring tension/compression
+	#pragma omp parallel for if(parallelism_enabled)
+	for( std::size_t s = 0 ; s < num_springs ; ++s ) {
+		springs[s].spring_energy() ;
+	}
+	ksum.reset() ;
+	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
+		ksum.add( s->energy ) ;
+	}
+	T energy = ksum.result() ;
+	/*
 	ksum.reset() ;
 	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 		ksum.add( s->spring_energy() ) ;
 	}
 	T energy = ksum.result() ;
-	
+	//*/
+
 	/*
 	// external work done by applied loads
 	Vector<T,N> displacement ;
@@ -601,13 +617,22 @@ T SpringNetwork<T,N>::total_energy( void )
 		p->net_force = static_cast<T>(0.0) ;
 	}
 	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-		s->start->net_force += s->get_force() ;
-		s->end->net_force   -= s->get_force() ;
+		s->start->net_force += s->get_force() ; // can't be parallel
+		s->end->net_force   -= s->get_force() ; // can't be parallel
 	}
+	//*
+	//#pragma omp parallel for if(parallelism_enabled)
+	for( std::size_t p = 0 ; p < num_points ; ++p ) {
+		points[p].net_force += points[p].force_applied ;
+		points[p].net_force_magnitude = points[p].net_force.norm() ;
+	}
+	//*/
+	/*
 	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
 		p->net_force += p->force_applied ;
 		p->net_force_magnitude = p->net_force.norm() ;
 	}
+	//*/
 	ksum.reset() ;
 	max_net_force_magnitude = static_cast<T>(0.0) ;
 	if( include_force_fixed_nodes ) {
