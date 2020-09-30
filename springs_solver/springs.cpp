@@ -24,8 +24,6 @@
 #include <memory>
 #include <cstdint>
 
-#include <thread>
-
 #include <sys/stat.h>
 
 #ifdef _WIN32
