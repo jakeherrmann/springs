@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "vectors_nd.hpp"
+#include "klein_summer.hpp"
 #include "spmat.hpp"
 
 ///
@@ -47,6 +48,8 @@ public:
 	bool use_numerical_hessian = false ;
 	double tolerance_change_objective = 1.0e-12 ;
 	double tolerance_sum_net_force = 1.0e-12 ;
+	//
+	bool parallelism_enabled = true ;
 
 	//
 	NetworkParameters( const std::string & , const std::string & ) ;
@@ -167,18 +170,23 @@ private:
 	std::vector<T> step_direction ;
 	spmat<T> hessian ;
 	//
+	KleinSummer<T> ksum ;
+	//
 	bool parallelism_enabled = true ;
 	std::size_t num_threads ;
 public:
 	//
+	void update_springs( void ) ;
+	void update_forces( void ) ;
 	T total_energy( void ) ;
+	T get_objective( void ) ;
 	void move_points_newton( const T & ) ;
 	void move_points_force( const T & ) ;
 	void move_points_rand( const T & ) ;
 	bool test_reboot( void ) ;
 	bool accept_new_points( const T & , const T & ) ;
 	void find_max_spring_length( void ) ;
-	T heat_up( const T & , const T & ) ;
+	T heat_up( const T & , const std::size_t & ) ;
 	void solve( void ) ;
 	void anneal( void ) ;
 	void minimize_energy( void ) ;

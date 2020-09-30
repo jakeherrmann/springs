@@ -8,7 +8,6 @@
 
 #include "springs.hpp"
 #include "vectors_nd.hpp"
-#include "klein_summer.hpp"
 #include "spmat.hpp"
 
 #include <algorithm>
@@ -24,7 +23,7 @@
 #include <memory>
 #include <cstdint>
 
-#include <thread>
+//#include <thread>
 #include <omp.h>
 
 #include <sys/stat.h>
@@ -268,9 +267,23 @@ void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters )
 	load_network_binary( file_input_nodes.c_str() , file_input_springs.c_str() ) ;
 	construct_network() ;
 	//
-	parallelism_enabled = true ;
-	num_threads = std::thread::hardware_concurrency() ;
-	std::cout << num_threads << " concurrent threads supported." << std::endl ;
+	parallelism_enabled = network_parameters.parallelism_enabled ;
+	if( parallelism_enabled ) {
+		if( num_springs > 1e4 ) {
+			num_threads = std::min( 6 , omp_get_max_threads() ) ;
+			omp_set_num_threads( num_threads ) ;
+			std::cout << num_threads << " threads selected." << std::endl ;
+		} else {
+			parallelism_enabled = false ;
+			num_threads = 1 ;
+			omp_set_num_threads( num_threads ) ;
+			std::cout << "Single-threaded: <= 10^4 springs." << std::endl ;
+		}
+	} else {
+		num_threads = 1 ;
+		omp_set_num_threads( num_threads ) ;
+		std::cout << "Single-threaded: parallelism not enabled." << std::endl ;
+	}
 	//
 	return ;
 }
@@ -558,26 +571,11 @@ T SpringNetwork<T,N>::total_energy( void )
 	// using klein summation, modification of kahan summation,
 	// to account for floating point precision issues with sums
 	// of many small numbers, or small + large numbers
-	KleinSummer<T> ksum ;
-
-	// internal energy due to spring tension/compression
-	#pragma omp parallel for if(parallelism_enabled)
-	for( std::size_t s = 0 ; s < num_springs ; ++s ) {
-		springs[s].spring_energy() ;
-	}
 	ksum.reset() ;
 	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 		ksum.add( s->energy ) ;
 	}
 	T energy = ksum.result() ;
-	/*
-	ksum.reset() ;
-	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-		ksum.add( s->spring_energy() ) ;
-	}
-	T energy = ksum.result() ;
-	//*/
-
 	/*
 	// external work done by applied loads
 	Vector<T,N> displacement ;
@@ -587,7 +585,26 @@ T SpringNetwork<T,N>::total_energy( void )
 		energy -= points[p].force_applied.dot( displacement ) ;
 	}
 	//*/
+	//energy += ( sum_net_force_magnitude * scale_length ) ;
+	return energy ;
+}
 
+///___________________ update_springs ___________________///
+template< class T , std::size_t N >
+void SpringNetwork<T,N>::update_springs( void )
+{
+	// internal energy due to spring tension/compression
+	// parallelize computation for more than 10^4 springs
+	#pragma omp for schedule(static)
+	for( std::size_t s = 0 ; s < num_springs ; ++s ) {
+		springs[s].spring_energy() ;
+	}
+}
+
+///___________________  update_forces ___________________///
+template< class T , std::size_t N >
+void SpringNetwork<T,N>::update_forces( void )
+{
 	/*
 	// account for force imbalances, "potential energy"
 	// combine external applied force & internal spring forces
@@ -613,46 +630,68 @@ T SpringNetwork<T,N>::total_energy( void )
 	//*/
 
 	// net force on each point (including fixed points!)
+	/*
+	#pragma omp for schedule(static)
+	for( std::size_t p = 0 ; p < num_points ; ++p ) {
+		points[p].net_force = static_cast<T>(0.0) ;
+	}
+	//*/
+	#pragma omp single
+	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
+		p->net_force = static_cast<T>(0.0) ;
+	}
+	#pragma omp single
+	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
+		s->start->net_force += s->force ;
+		s->end->net_force   -= s->force ;
+	}
+	#pragma omp for schedule(static)
+	for( std::size_t p = 0 ; p < num_points ; ++p ) {
+		Point<T,N> * current_point = &points[p] ;
+		current_point->net_force += current_point->force_applied ;
+		current_point->net_force_magnitude = current_point->net_force.norm() ;
+	}
+	/*
 	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
 		p->net_force = static_cast<T>(0.0) ;
 	}
 	for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-		s->start->net_force += s->get_force() ; // can't be parallel
-		s->end->net_force   -= s->get_force() ; // can't be parallel
+		Vector<T,N> spring_force = s->get_force() ;
+		s->start->net_force += spring_force ;
+		s->end->net_force   -= spring_force ;
 	}
-	//*
-	//#pragma omp parallel for if(parallelism_enabled)
-	for( std::size_t p = 0 ; p < num_points ; ++p ) {
-		points[p].net_force += points[p].force_applied ;
-		points[p].net_force_magnitude = points[p].net_force.norm() ;
-	}
-	//*/
-	/*
 	for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
 		p->net_force += p->force_applied ;
 		p->net_force_magnitude = p->net_force.norm() ;
 	}
 	//*/
-	ksum.reset() ;
-	max_net_force_magnitude = static_cast<T>(0.0) ;
-	if( include_force_fixed_nodes ) {
-		for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
-			if( !p->not_referenced ) {
-				max_net_force_magnitude = ( p->net_force_magnitude > max_net_force_magnitude ) ? p->net_force_magnitude : max_net_force_magnitude ;
-				ksum.add( p->net_force_magnitude ) ;
+	#pragma omp single
+	{
+		ksum.reset() ;
+		max_net_force_magnitude = static_cast<T>(0.0) ;
+		if( include_force_fixed_nodes ) {
+			for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
+				if( !p->not_referenced ) {
+					max_net_force_magnitude = ( p->net_force_magnitude > max_net_force_magnitude ) ? p->net_force_magnitude : max_net_force_magnitude ;
+					ksum.add( p->net_force_magnitude ) ;
+				}
+			}
+		} else {
+			for( iterNode n = nodes.begin() ; n != nodes.end() ; ++n ) {
+				max_net_force_magnitude = ( n->point->net_force_magnitude > max_net_force_magnitude ) ? n->point->net_force_magnitude : max_net_force_magnitude ;
+				ksum.add( n->point->net_force_magnitude ) ;
 			}
 		}
-	} else {
-		for( iterNode n = nodes.begin() ; n != nodes.end() ; ++n ) {
-			max_net_force_magnitude = ( n->point->net_force_magnitude > max_net_force_magnitude ) ? n->point->net_force_magnitude : max_net_force_magnitude ;
-			ksum.add( n->point->net_force_magnitude ) ;
-		}
+		sum_net_force_magnitude = ksum.result() ;
 	}
-	sum_net_force_magnitude = ksum.result() ;
+	return ;
+}
 
-	//energy += ( sum_net_force_magnitude * scale_length ) ;
-
-	if( objective=="energy"   ) { return energy                  ; } else
+///___________________  get_objective ___________________///
+template< class T , std::size_t N >
+T SpringNetwork<T,N>::get_objective( void )
+{
+	if( objective=="energy"   ) { return total_energy()          ; } else
 	if( objective=="sumforce" ) { return sum_net_force_magnitude ; } else
 	if( objective=="maxforce" ) { return max_net_force_magnitude ; }
 	else { return static_cast<T>(0.0) ; }
@@ -906,13 +945,14 @@ template< class T , std::size_t N >
 void SpringNetwork<T,N>::move_points_force( const T & step_size )
 {
 	// apply net force & move small displacement towards equilibrating position
-	iterNode n ;
-	iterNode n_end ;
+	//iterNode n ;
+	//iterNode n_end ;
 	Vector<T,N> small_displacement ;
-	for( n = nodes.begin() , n_end = nodes.end() ; n != n_end ; ++n ) {
-		small_displacement = n->point->net_force ;
+	#pragma omp for schedule(static) private(small_displacement)
+	for( std::size_t n = 0 ; n < nodes.size() ; ++n ) {
+		small_displacement = nodes[n].point->net_force ;
 		small_displacement *= step_size ;
-		n->point->move( small_displacement ) ;
+		nodes[n].point->move( small_displacement ) ;
 	}
 	return ;
 }
@@ -961,13 +1001,15 @@ bool SpringNetwork<T,N>::accept_new_points( const T & delta_energy , const T & t
 
 ///______________________  heat_up ______________________///
 template< class T , std::size_t N >
-T SpringNetwork<T,N>::heat_up( const T & amplitude , const T & num_config_test )
+T SpringNetwork<T,N>::heat_up( const T & amplitude , const std::size_t & num_config_test )
 {
 	T energy = static_cast<T>(0) ;
 	T energy_max = std::numeric_limits<T>::min() ;
 	points_prev = points ;
 	for( std::size_t i = 0 ; i < num_config_test ; ++i ) {
 		move_points_rand( amplitude ) ;
+		update_springs() ;
+		//update_forces() ; // not needed if energy does not depend on forces
 		energy = total_energy() ;
 		if( energy > energy_max ) {
 			energy_max = energy ;
@@ -1210,6 +1252,8 @@ void SpringNetwork<T,N>::anneal( void )
 	points_init = points ;
 	points_prev = points ;
 	points_best = points ;
+	update_springs() ;
+	update_forces() ;
 	T energy = total_energy() ;
 	//T energy_init = energy ;
 	T energy_prev = energy ;
@@ -1240,14 +1284,20 @@ void SpringNetwork<T,N>::anneal( void )
 	std::size_t num_small_change_max = 200 ;
 	std::size_t num_temperature_reductions     =   0 ;
 	std::size_t num_temperature_reductions_max = 300 ;
-	bool reboot ;
+	bool reboot = false ;
+	bool break_temperature_reductions = false ;
+	bool break_sum_net_force_magnitude = false ;
+	bool break_consecutive_reject = false ;
+	bool break_isnan_energy = false ;
 	find_max_spring_length() ;
 	
 	// choose starting temperature
 	// equivalent to 1/e probability to accept energy difference
 	T heatup_amplitude = 0.01 ;
 	std::size_t heatup_num_config = 1000 ;
+	double t0 = omp_get_wtime() ;
 	energy_compare = heat_up( heatup_amplitude , heatup_num_config ) ;
+	std::cout << "heatup time: " << omp_get_wtime() - t0 << std::endl ;
 	energy_compare = ( energy_compare > energy_compare_min ) ? energy_compare : energy_compare_min ;
 	T temperature = std::fabs( energy_compare - energy_best ) ;
 
@@ -1259,107 +1309,123 @@ void SpringNetwork<T,N>::anneal( void )
 		<< "  " << std::setw(10) << "E_change"
 		<< "  " << std::setw(10) << "stepSize"
 		<< "  " << std::setw(10) << "sum_F_net"
+		<< "  " << std::setw(10) << "time"
 		<< std::endl ;
+	double time_start = omp_get_wtime() ;
 
 	// begin annealing
+	#pragma omp parallel
 	for( std::size_t iter = 0 ; iter < local_num_iter_max ; ++iter ) {
 		
 		// test a new configuration, force-driven or random
 		move_points_force( step_size ) ;
 		//move_points_rand( step_size * 1E-5 ) ;
-		energy = total_energy() ; // also computes sum_net_force_magnitude
+		update_springs() ;
+		update_forces() ; // also computes sum_net_force_magnitude
 
-		// if configuration is too extreme, reset network to best
-		reboot = test_reboot() ;
-		if( reboot ) {
-			std::cout << "REBOOT" << std::endl ;
-			points = points_best ;
-			points_prev = points_best ;
-			energy_prev = energy_best ;
-			reboot = false ;
-			continue ;
-		}
-
-		//
-		relative_change_energy = std::fabs( energy - energy_prev ) / energy_compare ;
-		if( relative_change_energy < local_tolerance_change_objective ) {
-			++num_small_change ;
-		}
-		
-		// accept or reject new state based on change in energy
-		// accepting decreased energy is guaranteed
-		// accepting increased energy is more likely at high temperatures
-		if( energy < energy_best ) {
-			mean_energy_change += (energy-energy_prev) ;
-			step_size /= step_size_reduction ;
-			points_best = points ;
-			points_prev = points ;
-			energy_best = energy ;
-			energy_prev = energy ;
-			num_consecutive_reject = 0 ;
-			num_since_last_best = 0 ;
-		}
-		else if( accept_new_points( energy-energy_prev , temperature ) ) {
-			mean_energy_change += (energy-energy_prev) ;
-			points_prev = points ;
-			energy_prev = energy ;
-			num_consecutive_reject = 0 ;
-			++num_since_last_best ;
-		} else {
-			step_size *= step_size_reduction ;
-			points = points_prev ;
-			++num_consecutive_reject ;
-			++num_since_last_best ;
-		}
-
-		if( (local_num_iter_print>0) && (iter%local_num_iter_print==0) ) {
-			mean_energy_change /= static_cast<T>(local_num_iter_print) ;
-			std::cout
-				<< std::setprecision(3)
-				<< std::scientific
-				<< "  " << std::setw(10) << energy_best
-				<< "  " << std::setw(10) << energy
-				<< "  " << std::setw(10) << energy_prev
-				<< "  " << std::setw(10) << mean_energy_change
-				<< "  " << std::setw(10) << step_size
-				<< "  " << std::setw(10) << sum_net_force_magnitude
-				<< std::endl ;
-			mean_energy_change = static_cast<T>(0.0) ;
-		}
-		
-		if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
-			std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
-			make_dir( dir_output_iter_curr ) ;
-			save_network_binary(
-				(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
-				(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
-		}
-
-		// if energy changes are small for multiple iterations, then
-		// assume the current state is near local minimum, and
-		// reduce the temperature
-		if(    ( num_small_change >= num_small_change_max )
-			|| ( num_since_last_best >= num_since_last_best_max ) )
+		#pragma omp single
 		{
-			temperature *= temperature_reduction ;
-			++num_temperature_reductions ;
-			if( num_temperature_reductions >= num_temperature_reductions_max ) {
-				break ;
-			}
-			num_small_change = 0 ;
-			num_since_last_best = 0 ;
-		}
-		//
-		if( sum_net_force_magnitude < local_tolerance_sum_net_force ) {
-			break ;
-		}
-		if( num_consecutive_reject >= num_consecutive_reject_max ) {
-			break ;
-		}
-		if( std::isnan( energy ) ) {
-			break ;
-		}
+			// evaluate objective function at new configuration
+			energy = get_objective() ;
+			// if configuration is too extreme, reset network to best
+			reboot = test_reboot() ;
+			if( reboot ) {
+				std::cout << "REBOOT" << std::endl ;
+				points = points_best ;
+				points_prev = points_best ;
+				energy_prev = energy_best ;
+				reboot = false ;
+			} else {
 
+				//
+				relative_change_energy = std::fabs( energy - energy_prev ) / energy_compare ;
+				if( relative_change_energy < local_tolerance_change_objective ) {
+					++num_small_change ;
+				}
+				
+				// accept or reject new state based on change in energy
+				// accepting decreased energy is guaranteed
+				// accepting increased energy is more likely at high temperatures
+				if( energy < energy_best ) {
+					mean_energy_change += (energy-energy_prev) ;
+					step_size /= step_size_reduction ;
+					points_best = points ;
+					points_prev = points ;
+					energy_best = energy ;
+					energy_prev = energy ;
+					num_consecutive_reject = 0 ;
+					num_since_last_best = 0 ;
+				}
+				else if( accept_new_points( energy-energy_prev , temperature ) ) {
+					mean_energy_change += (energy-energy_prev) ;
+					points_prev = points ;
+					energy_prev = energy ;
+					num_consecutive_reject = 0 ;
+					++num_since_last_best ;
+				} else {
+					step_size *= step_size_reduction ;
+					points = points_prev ;
+					++num_consecutive_reject ;
+					++num_since_last_best ;
+				}
+
+				if( (local_num_iter_print>0) && (iter%local_num_iter_print==0) ) {
+					mean_energy_change /= static_cast<T>(local_num_iter_print) ;
+					std::cout
+						<< std::setprecision(3)
+						<< std::scientific
+						<< "  " << std::setw(10) << energy_best
+						<< "  " << std::setw(10) << energy
+						<< "  " << std::setw(10) << energy_prev
+						<< "  " << std::setw(10) << mean_energy_change
+						<< "  " << std::setw(10) << step_size
+						<< "  " << std::setw(10) << sum_net_force_magnitude
+						<< std::fixed
+						<< "  " << std::setw(10) << omp_get_wtime()-time_start
+						<< std::endl ;
+					mean_energy_change = static_cast<T>(0.0) ;
+				}
+				
+				if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
+					std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
+					make_dir( dir_output_iter_curr ) ;
+					save_network_binary(
+						(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
+						(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
+				}
+
+				// if energy changes are small for multiple iterations, then
+				// assume the current state is near local minimum, and
+				// reduce the temperature
+				if(    ( num_small_change >= num_small_change_max )
+					|| ( num_since_last_best >= num_since_last_best_max ) )
+				{
+					temperature *= temperature_reduction ;
+					++num_temperature_reductions ;
+					if( num_temperature_reductions >= num_temperature_reductions_max ) {
+						break_temperature_reductions = true ;
+					}
+					num_small_change = 0 ;
+					num_since_last_best = 0 ;
+				}
+
+				break_sum_net_force_magnitude = sum_net_force_magnitude < local_tolerance_sum_net_force ;
+				break_consecutive_reject = num_consecutive_reject >= num_consecutive_reject_max ;
+				break_isnan_energy = std::isnan( energy ) ;
+			}
+		}
+		if( reboot ) {
+			continue ;
+		} else if( break_temperature_reductions ) {
+			break ;
+		} else if( break_sum_net_force_magnitude ) {
+			break ;
+		} else if( break_consecutive_reject ) {
+			break ;
+		} else if( break_isnan_energy ) {
+			break ;
+		}
+		
 		/*
 		// if no temperature reductions after many iterations, reset and
 		// increase chance of accepting higher energy configurations
@@ -1372,7 +1438,7 @@ void SpringNetwork<T,N>::anneal( void )
 			case 3: heatup_amplitude = 0.02 ; heatup_num_config = 2000 ; break ;
 			case 4: heatup_amplitude = 0.05 ; heatup_num_config = 5000 ; break ;
 			}
-			energy_best = heat_up( heatup_amplitude , heatup_num_config ) ;
+			energy_best = heat_up( heatup_amplitude , heatup_num_config ) ; // this should be outside omp single
 			iter += heatup_num_config ;
 			points_prev = points ;
 			energy_prev = energy ;
@@ -1391,6 +1457,21 @@ void SpringNetwork<T,N>::anneal( void )
 		<< std::endl ;
 	points = points_best ;
 	energy = energy_best ;
+
+	update_springs() ;
+	update_forces() ; // also computes sum_net_force_magnitude
+	energy = get_objective() ;
+	std::cout
+		<< std::setprecision(3)
+		<< std::scientific
+		<< "  " << std::setw(10) << energy_best
+		<< "  " << std::setw(10) << energy
+		<< "  " << std::setw(10) << energy_prev
+		<< "  " << std::setw(10) << energy-energy_prev
+		<< "  " << std::setw(10) << step_size
+		<< "  " << std::setw(10) << sum_net_force_magnitude
+		<< std::endl ;
+
 	return ;
 }
 

@@ -1,6 +1,6 @@
 CC := g++
-CC_FLAGS := -Wall -std=gnu++17 -O3 -msse -msse2 -msse3 -mfpmath=sse -mtune=native -march=native -pthread -fopenmp
-# -fopenmp
+CC_FLAGS := -Wall -Wno-int-in-bool-context -std=gnu++2a -O3 -msse -msse2 -msse3 -mfpmath=sse -mtune=native -march=native -pthread -fopenmp -g
+# -Wno-int-in-bool-context
 CPPFILES := $(wildcard *.cpp)
 OBJFILES := $(addprefix obj/,$(CPPFILES:.cpp=.o))
 
