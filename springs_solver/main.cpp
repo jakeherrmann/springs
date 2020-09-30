@@ -37,7 +37,6 @@ int main( int argc , const char * argv[] ) {
 
 	// DEFAULT PARAMETERS
 	bool verbose = false ;
-	bool parallel = true ;
 
 	// OPTIONAL ARGUMENTS (DEFAULT)
 	// -v --verbose := (0)=quiet, 1=verbose
@@ -52,8 +51,6 @@ int main( int argc , const char * argv[] ) {
 		val = argv[i+1] ;
 		if( (arg=="-v") || (arg=="--verbose") ) {
 			verbose = std::stoi(val) != 0 ;
-		} else if( (arg=="-p") || (arg=="--parallel") ) {
-			parallel = std::stoi(val) != 0 ;
 		}
 	}
 
@@ -93,7 +90,6 @@ int main( int argc , const char * argv[] ) {
 	
 	std::cout << "\n0.  Parameters" << std::endl ;
 	NetworkParameters network_parameters( dir_input , dir_output ) ;
-	network_parameters.parallelism_enabled = parallel ;
 	
 	std::cout << "\n1.  Create Spring Network" << std::endl ;
 	std::unique_ptr<ASpringNetwork> spring_network = ASpringNetwork::create_spring_network_obj( network_parameters ) ;

@@ -13,9 +13,9 @@ addpath( 'springs_matlab_visualizer' )
 
 %% parameters for rectangular grid
 
-num_row = 10 ;
-num_col = 10 ;
-num_lay = 10 ;
+num_row = 7 ;
+num_col = 8 ;
+num_lay = 9 ;
 k_mean = 1.0 ;
 k_stdv = 0.0 ;
 L0_mean = 1.0 ;
@@ -130,7 +130,7 @@ options = springs_default_options() ;
 options.algorithm = 'anneal' ;
 options.objective = 'maxforce' ;
 options.include_force_fixed_nodes = false ;
-options.num_iter_print = 1000 ;
+options.num_iter_print = 10000 ;
 options.tolerance_change_objective = 1e-24 ;
 options.tolerance_sum_net_force = 1e-24 ;
 
@@ -140,7 +140,7 @@ options.tolerance_sum_net_force = 1e-24 ;
 %% ADD FORCES AND RESOLVE EQUILIBRIUM
 
 % select a few random nodes (not on boundary) and apply random forces
-num_rand_force = round(0.05*num_row*num_col*num_lay) ;
+num_rand_force = 200 ;
 magnitude = 0.4 ;
 free_node_ind = find( ~any( nodes_eq.fixed ,2) ) ;
 rand_node_ind = free_node_ind( randperm( numel(free_node_ind) ,num_rand_force) ) ;
@@ -158,6 +158,6 @@ nodes_eq.force( rand_node_ind ,:) = bsxfun(@times, ...
 
 h_before = display_3D( nodes_eq       , springs , springs_tension(nodes_eq      ,springs) , [0,0.2] , parula(10) , true ) ;
 h_after  = display_3D( nodes_eq_force , springs , springs_tension(nodes_eq_force,springs) , [0,0.2] , parula(10) , true ) ;
-linkprop( [h_before.ax,h_after.ax] , {'XLim','YLim','ZLim','View'} ) ;
+linkaxes( [h_before.ax,h_after.ax] , 'xy' ) ;
 
 %%
