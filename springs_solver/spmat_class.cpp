@@ -88,7 +88,7 @@ void spmat<T>::set_val( std::vector<std::size_t> indRow , // row indexes (must b
 					    vec_T val )                       // new values for specificied element
 {
 	spmat<T>::itCol cc ;
-	for( std::size_t jj = 0 ; jj < val.size() ; ++jj ) {
+	for( int jj = 0 ; jj < val.size() ; ++jj ) {
 		if( val[jj] != static_cast<T>(0) ) {
 			for( cc = M[ indRow[jj] ].begin() ; cc != M[ indRow[jj] ].end() ; ++cc ) {
 				if( (*cc).first == indCol[jj] ) {
@@ -120,7 +120,7 @@ void spmat<T>::set_val( std::size_t *indRow , // row indexes (must be less than 
 					    std::size_t numVal )  // number of elements in arrays
 {
 	spmat<T>::itCol cc ;
-	for( std::size_t jj = 0 ; jj < numVal ; ++jj ) {
+	for( int jj = 0 ; jj < numVal ; ++jj ) {
 		if( val[jj] != static_cast<T>(0) ) {
 			for( cc = M[ indRow[jj] ].begin() ; cc != M[ indRow[jj] ].end() ; ++cc ) {
 				if( (*cc).first == indCol[jj] ) {
