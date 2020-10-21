@@ -73,20 +73,34 @@ public:
 template< class T , std::size_t N >
 class Spring {
 public:
-	static std::size_t num_stiffness_tension ;
-	static std::size_t num_stiffness_compression ;
+	enum ForceLengthRelationship { polynomial=0 , exponential=1 , powerlaw=2 } ;
 public:
 	Point<T,N> * start ;
 	Point<T,N> * end ;
-	std::vector<T> stiffness_tension ;
-	std::vector<T> stiffness_compression ;
-	T effective_stiffness ;
+	ForceLengthRelationship force_length_type_tension ;
+	ForceLengthRelationship force_length_type_compression ;
+	std::size_t num_force_length_parameters_tension ;
+	std::size_t num_force_length_parameters_compression ;
+	std::vector<T> force_length_parameters_tension ;
+	std::vector<T> force_length_parameters_compression ;
+	T effective_spring_constant ;
 	T length ;
 	T rest_length ;
 	Vector<T,N> force ;
 	bool allow_compression ;
 public:
 	T spring_energy( void ) ;
+	void spring_tension( const T & , T & , T & ) ;
+	void spring_compression( const T & , T & , T & ) ;
+	static void spring_force_polynomial( const T & , const std::size_t & , const std::vector<T> & , T & , T & ) ;
+	static void spring_force_exponential( const T & , const std::size_t & , const std::vector<T> & , T & , T & ) ;
+	static void spring_force_powerlaw( const T & , const std::size_t & , const std::vector<T> & , T & , T & ) ;
+	T spring_stiffness_rest( void ) ;
+	static T spring_stiffness_rest_polynomial( const std::size_t & , const std::vector<T> & ) ;
+	static T spring_stiffness_rest_exponential( const std::size_t & , const std::vector<T> & ) ;
+	static T spring_stiffness_rest_powerlaw( const std::size_t & , const std::vector<T> & ) ;
+	T spring_get_scale_stiffness( void ) ;
+	void spring_rescale( const T & , const T & ) ;
 	Vector<T,N> get_force( void ) { return force ; } ;
 } ;
 
