@@ -73,7 +73,7 @@ public:
 template< class T , std::size_t N >
 class Spring {
 public:
-	enum ForceLengthRelationship { polynomial=0 , exponential=1 , powerlaw=2 } ;
+	enum ForceLengthRelationship { none=0 , polynomial=1 , exponential=2 , powerlaw=3 } ;
 public:
 	Point<T,N> * start ;
 	Point<T,N> * end ;
@@ -87,7 +87,6 @@ public:
 	T length ;
 	T rest_length ;
 	Vector<T,N> force ;
-	bool allow_compression ;
 public:
 	T spring_energy( void ) ;
 	void spring_tension( const T & , T & , T & ) ;

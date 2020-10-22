@@ -13,15 +13,11 @@ end
 network_param.num_points                = size( nodes.position ,1) ;
 network_param.num_springs               = size( springs.nodes  ,1) ;
 network_param.num_dimensions            = size( nodes.position ,2) ;
-network_param.num_stiffness_tension     = size( springs.stiffness_tension     ,2) ;
-network_param.num_stiffness_compression = size( springs.stiffness_compression ,2) ;
 
 numeric_args = {
 	'num_points'
 	'num_springs'
 	'num_dimensions'
-	'num_stiffness_tension'
-	'num_stiffness_compression'
 	'num_iter_save'
 	'num_iter_print'
 	'num_iter_max'
@@ -54,11 +50,14 @@ fclose( fid ) ;
 filename = fullfile( dir_input , 'network_springs.dat' ) ;
 fid = fopen( filename ,'wb') ;
 for ss = 1 : network_param.num_springs
-	fwrite( fid , springs.nodes(ss,:)-1               , 'uint32'                ) ;
-	fwrite( fid , springs.rest_length(ss)             , network_param.precision ) ;
-	fwrite( fid , springs.stiffness_tension(ss,:)     , network_param.precision ) ;
-	fwrite( fid , springs.stiffness_compression(ss,:) , network_param.precision ) ;
-	fwrite( fid , springs.compression(ss)             , 'uint8'                 ) ;
+	fwrite( fid , springs.nodes(ss,:)-1                                  , 'uint32'                ) ;
+	fwrite( fid , springs.force_length_type_tension(ss)                  , 'uint8'                 ) ;
+	fwrite( fid , springs.force_length_type_compression(ss)              , 'uint8'                 ) ;
+	fwrite( fid , numel(springs.force_length_parameters_tension{ss}    ) , 'uint8'                 ) ;
+	fwrite( fid , numel(springs.force_length_parameters_compression{ss}) , 'uint8'                 ) ;
+	fwrite( fid , springs.rest_length(ss)                                , network_param.precision ) ;
+	fwrite( fid , springs.force_length_parameters_tension{ss}            , network_param.precision ) ;
+	fwrite( fid , springs.force_length_parameters_compression{ss}        , network_param.precision ) ;
 end
 fclose( fid ) ;
 

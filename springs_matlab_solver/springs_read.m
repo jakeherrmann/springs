@@ -39,11 +39,12 @@ nodes.position = zeros( [ network_param.num_points , network_param.num_dimension
 nodes.force    = zeros( [ network_param.num_points , network_param.num_dimensions ] ) ;
 nodes.fixed    = false( [ network_param.num_points , network_param.num_dimensions ] ) ;
 
-springs.nodes                 = zeros( [ network_param.num_springs , 2                                       ] ) ;
-springs.rest_length           = zeros( [ network_param.num_springs , 1                                       ] ) ;
-springs.stiffness_tension     = zeros( [ network_param.num_springs , network_param.num_stiffness_tension     ] ) ;
-springs.stiffness_compression = zeros( [ network_param.num_springs , network_param.num_stiffness_compression ] ) ;
-springs.compression           = zeros( [ network_param.num_springs , 1                                       ] ) ;
+springs.nodes                               = zeros( [ network_param.num_springs , 2 ] ) ;
+springs.rest_length                         = zeros( [ network_param.num_springs , 1 ] ) ;
+springs.force_length_type_tension           = zeros( [ network_param.num_springs , 1 ] ) ;
+springs.force_length_type_compression       = zeros( [ network_param.num_springs , 1 ] ) ;
+springs.force_length_parameters_tension     =  cell( [ network_param.num_springs , 1 ] ) ;
+springs.force_length_parameters_compression =  cell( [ network_param.num_springs , 1 ] ) ;
 
 filename = file_nodes ;
 fid = fopen( filename ,'rb') ;
@@ -57,11 +58,13 @@ fclose( fid ) ;
 filename = file_springs ;
 fid = fopen( filename ,'rb') ;
 for ss = 1 : network_param.num_springs
-	springs.nodes(ss,:)                 = fread( fid , 2                                       , 'uint32'                ) + 1 ;
-	springs.rest_length(ss)             = fread( fid , 1                                       , network_param.precision ) ;
-	springs.stiffness_tension(ss,:)     = fread( fid , network_param.num_stiffness_tension     , network_param.precision ) ;
-	springs.stiffness_compression(ss,:) = fread( fid , network_param.num_stiffness_compression , network_param.precision ) ;
-	springs.compression(ss)             = fread( fid , 1                                       , 'uint8'                 ) ;
+	springs.nodes(ss,:)                             = fread( fid , 2       , 'uint32'                ) + 1 ;
+	springs.force_length_type_tension(ss)           = fread( fid , 1       , 'uint8'                 ) ;
+	springs.force_length_type_compression(ss)       = fread( fid , 1       , 'uint8'                 ) ;
+	NFLP                                            = fread( fid , 2       , 'uint8'                 ) ;
+	springs.rest_length(ss)                         = fread( fid , 1       , network_param.precision ) ;
+	springs.force_length_parameters_tension{ss}     = fread( fid , NFLP(1) , network_param.precision ) ;
+	springs.force_length_parameters_compression{ss} = fread( fid , NFLP(2) , network_param.precision ) ;
 end
 fclose( fid ) ;
 

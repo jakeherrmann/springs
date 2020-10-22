@@ -2,23 +2,40 @@ function force = springs_tension( nodes , springs )
 % force = springs_tension( nodes , springs ) returns the force in each spring, positive for
 % tension and negative for compression, if compression is allowed.
 
+num_springs = size(springs.nodes,1) ;
+
 delta_position = nodes.position( springs.nodes(:,2) ,:) - nodes.position( springs.nodes(:,1) ,:) ;
 length = sqrt(sum(power( delta_position ,2),2)) ;
 delta_length = length - springs.rest_length ;
-force = zeros( [size(springs.nodes,1),1] ) ;
-
-% springs in tension
-NST = size( springs.stiffness_tension ,2) ;
-if NST > 0
-	ind = find( delta_length > 0.0 ) ;
-	force(ind,:) = sum( bsxfun(@power,delta_length(ind),1:NST) .* springs.stiffness_tension(ind,:) ,2) ;
-end
-
-% springs in compression
-NSC = size( springs.stiffness_compression ,2) ;
-if NSC > 0
-	ind = find( ( delta_length < 0.0 ) & springs.compression ) ;
-	force(ind,:) = -sum( bsxfun(@power,delta_length(ind),1:NST) .* springs.stiffness_compression(ind,:) ,2) ;
+force = zeros( [num_springs,1] ) ;
+for ss = 1 : num_springs
+	if delta_length == 0.0
+		% spring at rest
+		continue ;
+	elseif delta_length(ss) > 0.0
+		% spring in tension
+		DL = delta_length(ss) ;
+		force_length_type = springs.force_length_type_tension(ss) ;
+		force_length_parameters = springs.force_length_parameters_tension{ss} ;
+		force_sign = +1 ;
+	elseif delta_length(ss) < 0.0
+		% spring in compression
+		DL = abs(delta_length(ss)) ;
+		force_length_type = springs.force_length_type_compression(ss) ;
+		force_length_parameters = springs.force_length_parameters_compression{ss} ;
+		force_sign = -1 ;
+	end
+	switch force_length_type
+		case 0 %none
+			continue ;
+		case 1 %polynomial
+			force_magnitude = sum( bsxfun(@power,DL,1:numel(force_length_parameters)) .* force_length_parameters ,2) ;
+		case 2 %exponential
+			force_magnitude = sum( exp( bsxfun(@times,DL,force_length_parameters(2:2:end)) ) .* force_length_parameters(1:2:end) ,2) ;
+		case 3 %powerlaw
+			force_magnitude = sum( bsxfun(@power,DL,force_length_parameters(2:2:end)) .* force_length_parameters(1:2:end) ,2) ;
+	end
+	force(ss) = force_magnitude * force_sign ;
 end
 
 end

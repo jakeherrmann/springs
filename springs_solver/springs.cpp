@@ -79,8 +79,6 @@ void NetworkParameters::load_parameters( const char * file_name )
 				if( arg=="num_springs"                ) { num_springs                = static_cast<std::size_t>(std::stoi(val)) ; } else
 				if( arg=="precision"                  ) { precision                  =                                    val   ; } else
 				if( arg=="num_dimensions"             ) { num_dimensions             = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="num_stiffness_tension"      ) { num_stiffness_tension      = static_cast<std::size_t>(std::stoi(val)) ; } else
-				if( arg=="num_stiffness_compression"  ) { num_stiffness_compression  = static_cast<std::size_t>(std::stoi(val)) ; } else
 				if( arg=="algorithm"                  ) { algorithm                  =                                    val   ; } else
 				if( arg=="objective"                  ) { objective                  =                                    val   ; } else
 				if( arg=="num_iter_save"              ) { num_iter_save              = static_cast<std::size_t>(std::stoi(val)) ; } else
@@ -110,8 +108,6 @@ void NetworkParameters::save_parameters( const char * file_name )
 				 << "num_springs"                << ' ' << num_springs                << '\n'
 				 << "precision"                  << ' ' << precision                  << '\n'
 				 << "num_dimensions"             << ' ' << num_dimensions             << '\n'
-				 << "num_stiffness_tension"      << ' ' << num_stiffness_tension      << '\n'
-				 << "num_stiffness_compression"  << ' ' << num_stiffness_compression  << '\n'
 				 << "algorithm"                  << ' ' << algorithm                  << '\n'
 				 << "objective"                  << ' ' << objective                  << '\n'
 				 << "num_iter_save"              << ' ' << num_iter_save              << '\n'
@@ -152,96 +148,66 @@ T Spring<T,N>::spring_energy( void )
 	delta_position -= start->position ;
 	length = delta_position.norm() ;
 	T delta_length = length - rest_length ;
-	T force_magnitude ;
-	T energy ;
-	effective_spring_constant = static_cast<T>(0) ;
-	if( delta_length > 0 ) {
-		spring_tension( delta_length , force_magnitude , energy ) ;
-		effective_spring_constant = force_magnitude / delta_length ;
-	} else if( delta_length < 0 ) {
-		if( allow_compression ) {
-			delta_length = std::abs( delta_length ) ;
-			spring_compression( delta_length , force_magnitude , energy ) ;
-			effective_spring_constant = force_magnitude / delta_length ;
-			force_magnitude = -force_magnitude ;
-		} else {
-			effective_spring_constant = static_cast<T>(0) ;
-		}
+	T force_magnitude = static_cast<T>(0) ;
+	T force_sign = static_cast<T>(0) ;
+	T energy = static_cast<T>(0) ;
+	Spring<T,N>::ForceLengthRelationship * force_length_type = NULL ;
+	std::size_t * num_force_length_parameters = NULL ;
+	std::vector<T> * force_length_parameters = NULL ;
+	if( delta_length == 0.0 ) {
+		force_magnitude = static_cast<T>(0) ;
+		energy = static_cast<T>(0) ;
+		effective_spring_constant = spring_stiffness_rest() ;
 	} else {
-		effective_spring_constant = spring_stiffness_rest( void ) ;
+		if( delta_length > 0 ) {
+			force_length_type           = & force_length_type_tension ;
+			num_force_length_parameters = & num_force_length_parameters_tension ;
+			force_length_parameters     = & force_length_parameters_tension ;
+			force_sign = static_cast<T>(+1) ;
+		} else if( delta_length < 0 ) {
+			delta_length = std::abs( delta_length ) ;
+			force_length_type           = & force_length_type_compression ;
+			num_force_length_parameters = & num_force_length_parameters_compression ;
+			force_length_parameters     = & force_length_parameters_compression ;
+			force_sign = static_cast<T>(-1) ;
+		}
+		switch( * force_length_type ) {
+			case Spring<T,N>::ForceLengthRelationship::polynomial :
+				Spring<T,N>::spring_force_polynomial( delta_length ,
+													  * num_force_length_parameters ,
+													  * force_length_parameters ,
+													  force_magnitude ,
+													  energy ) ;
+				break ;
+			case Spring<T,N>::ForceLengthRelationship::exponential :
+				Spring<T,N>::spring_force_exponential( delta_length ,
+													   * num_force_length_parameters ,
+													   * force_length_parameters ,
+													   force_magnitude ,
+													   energy ) ;
+				break ;
+			case Spring<T,N>::ForceLengthRelationship::powerlaw :
+				Spring<T,N>::spring_force_powerlaw( delta_length ,
+												    * num_force_length_parameters ,
+												    * force_length_parameters ,
+												    force_magnitude ,
+												    energy ) ;
+				break ;
+			default:
+				force_magnitude = static_cast<T>(0) ;
+				energy = static_cast<T>(0) ;
+		}
+		effective_spring_constant = force_magnitude / delta_length ;
+		force_magnitude *= force_sign ;
 	}
 	force = delta_position ;
 	force *= (force_magnitude/length) ;
 	return energy ;
 }
 
-///___________________ spring_tension ___________________///
-template< class T , std::size_t N >
-void Spring<T,N>::spring_tension( const T & delta_length ,
-								  T & force_magnitude ,
-								  T & energy )
-{
-	switch( force_length_type_tension ) {
-		case Spring<T,N>::ForceLengthRelationship::polynomial :
-			Spring<T,N>::spring_force_polynomial( delta_length ,
-									 num_force_length_parameters_tension ,
-									 force_length_parameters_tension ,
-									 force_magnitude ,
-									 energy ) ;
-			break ;
-		case Spring<T,N>::ForceLengthRelationship::exponential :
-			Spring<T,N>::spring_force_exponential( delta_length ,
-									  num_force_length_parameters_tension ,
-									  force_length_parameters_tension ,
-									  force_magnitude ,
-									  energy ) ;
-			break ;
-		case Spring<T,N>::ForceLengthRelationship::powerlaw :
-			Spring<T,N>::spring_force_powerlaw( delta_length ,
-								   num_force_length_parameters_tension ,
-								   force_length_parameters_tension ,
-								   force_magnitude ,
-								   energy ) ;
-			break ;
-	}
-	return ;
-}
-
-///_________________ spring_compression _________________///
-template< class T , std::size_t N >
-void Spring<T,N>::spring_compression( const T & delta_length ,
-									  T & force_magnitude ,
-									  T & energy )
-{
-	switch( force_length_type_compression ) {
-		case Spring<T,N>::ForceLengthRelationship::polynomial :
-			Spring<T,N>::spring_force_polynomial( delta_length ,
-									 num_force_length_parameters_tension ,
-									 force_length_parameters_tension ,
-									 force_magnitude ,
-									 energy ) ;
-			break ;
-		case Spring<T,N>::ForceLengthRelationship::exponential :
-			Spring<T,N>::spring_force_exponential( delta_length ,
-									  num_force_length_parameters_tension ,
-									  force_length_parameters_tension ,
-									  force_magnitude ,
-									  energy ) ;
-			break ;
-		case Spring<T,N>::ForceLengthRelationship::powerlaw :
-			Spring<T,N>::spring_force_powerlaw( delta_length ,
-								   num_force_length_parameters_tension ,
-								   force_length_parameters_tension ,
-								   force_magnitude ,
-								   energy ) ;
-			break ;
-	}
-	return ;
-}
-
 ///______________  spring_force_polynomial ______________///
 template< class T , std::size_t N >
-static void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
+void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
 										   const std::size_t & num_force_length_parameters ,
 										   const std::vector<T> & force_length_parameters ,
 										   T & force_magnitude ,
@@ -262,7 +228,7 @@ static void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
 
 ///______________ spring_force_exponential ______________///
 template< class T , std::size_t N >
-static void Spring<T,N>::spring_force_exponential( const T & delta_length ,
+void Spring<T,N>::spring_force_exponential( const T & delta_length ,
 										    const std::size_t & num_force_length_parameters ,
 										    const std::vector<T> & force_length_parameters ,
 										    T & force_magnitude ,
@@ -281,7 +247,7 @@ static void Spring<T,N>::spring_force_exponential( const T & delta_length ,
 
 ///_______________  spring_force_powerlaw _______________///
 template< class T , std::size_t N >
-static void Spring<T,N>::spring_force_powerlaw( const T & delta_length ,
+void Spring<T,N>::spring_force_powerlaw( const T & delta_length ,
 										 const std::size_t & num_force_length_parameters ,
 										 const std::vector<T> & force_length_parameters ,
 										 T & force_magnitude ,
@@ -302,44 +268,40 @@ static void Spring<T,N>::spring_force_powerlaw( const T & delta_length ,
 template< class T , std::size_t N >
 T Spring<T,N>::spring_stiffness_rest( void )
 {
+	std::size_t * num_force_length_parameters ;
+	std::vector<T> * force_length_parameters ;
 	T effective_spring_constant_rest = static_cast<T>(0) ;
 	if( num_force_length_parameters_tension > 0 ) {
-		switch( force_length_type_tension ) {
-			case Spring<T,N>::ForceLengthRelationship::polynomial :
-				effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_polynomial( num_force_length_parameters_tension ,
-																								force_length_parameters_tension ) ;
-				break ;
-			case Spring<T,N>::ForceLengthRelationship::exponential :
-				effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_exponential( num_force_length_parameters_tension ,
-																								 force_length_parameters_tension ) ;
-				break ;
-			case Spring<T,N>::ForceLengthRelationship::powerlaw :
-				effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_powerlaw( num_force_length_parameters_tension ,
-																							  force_length_parameters_tension ) ;
-				break ;
-		}
+		num_force_length_parameters = & num_force_length_parameters_tension ;
+		force_length_parameters     = & force_length_parameters_tension ;
 	} else if( num_force_length_parameters_compression > 0 ) {
-		switch( force_length_type_compression ) {
-			case Spring<T,N>::ForceLengthRelationship::polynomial :
-				effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_polynomial( num_force_length_parameters_compression ,
-																								force_length_parameters_compression ) ;
-				break ;
-			case Spring<T,N>::ForceLengthRelationship::exponential :
-				effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_exponential( num_force_length_parameters_compression ,
-																								 force_length_parameters_compression ) ;
-				break ;
-			case Spring<T,N>::ForceLengthRelationship::powerlaw :
-				effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_powerlaw( num_force_length_parameters_compression ,
-																							  force_length_parameters_compression ) ;
-				break ;
-		}
+		num_force_length_parameters = & num_force_length_parameters_compression ;
+		force_length_parameters     = & force_length_parameters_compression ;
+	} else {
+		return static_cast<T>(0) ;
+	}
+	switch( force_length_type_tension ) {
+		case Spring<T,N>::ForceLengthRelationship::polynomial :
+			effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_polynomial( num_force_length_parameters_tension ,
+																							force_length_parameters_tension ) ;
+			break ;
+		case Spring<T,N>::ForceLengthRelationship::exponential :
+			effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_exponential( num_force_length_parameters_tension ,
+																							 force_length_parameters_tension ) ;
+			break ;
+		case Spring<T,N>::ForceLengthRelationship::powerlaw :
+			effective_spring_constant_rest = Spring<T,N>::spring_stiffness_rest_powerlaw( num_force_length_parameters_tension ,
+																						  force_length_parameters_tension ) ;
+			break ;
+		default:
+			effective_spring_constant_rest = static_cast<T>(0) ;
 	}
 	return effective_spring_constant_rest ;
 }
 
 ///__________ spring_stiffness_rest_polynomial __________///
 template< class T , std::size_t N >
-static T Spring<T,N>::spring_stiffness_rest_polynomial( const std::size_t & num_force_length_parameters ,
+T Spring<T,N>::spring_stiffness_rest_polynomial( const std::size_t & num_force_length_parameters ,
 												 const std::vector<T> & force_length_parameters )
 {
 	return force_length_parameters[0] ;
@@ -347,7 +309,7 @@ static T Spring<T,N>::spring_stiffness_rest_polynomial( const std::size_t & num_
 
 ///_________  spring_stiffness_rest_exponential _________///
 template< class T , std::size_t N >
-static T Spring<T,N>::spring_stiffness_rest_exponential( const std::size_t & num_force_length_parameters ,
+T Spring<T,N>::spring_stiffness_rest_exponential( const std::size_t & num_force_length_parameters ,
 												  const std::vector<T> & force_length_parameters )
 {
 	T spring_constant_rest = static_cast<T>(0) ;
@@ -359,7 +321,7 @@ static T Spring<T,N>::spring_stiffness_rest_exponential( const std::size_t & num
 
 ///___________ spring_stiffness_rest_powerlaw ___________///
 template< class T , std::size_t N >
-static T Spring<T,N>::spring_stiffness_rest_powerlaw( const std::size_t & num_force_length_parameters ,
+ T Spring<T,N>::spring_stiffness_rest_powerlaw( const std::size_t & num_force_length_parameters ,
 											   const std::vector<T> & force_length_parameters )
 {
 	T spring_constant_rest = static_cast<T>(0) ;
@@ -391,6 +353,8 @@ T Spring<T,N>::spring_get_scale_stiffness( void )
 				case Spring<T,N>::ForceLengthRelationship::powerlaw :
 					spring_scale_stiffness = force_length_parameters_tension[0] ;
 					break ;
+				default:
+					break ;
 			}
 		} else {
 			switch( force_length_type_compression ) {
@@ -402,6 +366,8 @@ T Spring<T,N>::spring_get_scale_stiffness( void )
 					break ;
 				case Spring<T,N>::ForceLengthRelationship::powerlaw :
 					spring_scale_stiffness = force_length_parameters_compression[0] ;
+					break ;
+				default:
 					break ;
 			}
 		}
@@ -431,6 +397,8 @@ void Spring<T,N>::spring_rescale( const T & scale_length , const T & scale_stiff
 				force_length_parameters_tension[i] *= scale_stiffness*std::pow(scale_length,static_cast<T>(1)-force_length_parameters_tension[i+1]) ;
 			}
 			break ;
+		default:
+			break ;
 	}
 	switch( force_length_type_compression ) {
 		case Spring<T,N>::ForceLengthRelationship::polynomial :
@@ -449,32 +417,14 @@ void Spring<T,N>::spring_rescale( const T & scale_length , const T & scale_stiff
 				force_length_parameters_compression[i] *= scale_stiffness*std::pow(scale_length,static_cast<T>(1)-force_length_parameters_compression[i+1]) ;
 			}
 			break ;
+		default:
+			break ;
 	}
 	return ;
 }
 
-
-s->rest_length /= scale_length ;
-for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_tension ; ++i ) {
-	s->stiffness_tension[i] /= scale_stiffness ;
-}
-for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_compression ; ++i ) {
-	s->stiffness_compression[i] /= scale_stiffness ;
-}
-
-s->rest_length *= scale_length ;
-for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_tension ; ++i ) {
-	s->stiffness_tension[i] *= scale_stiffness ;
-}
-for( std::size_t i = 0 ; i < Spring<T,N>::num_stiffness_compression ; ++i ) {
-	s->stiffness_compression[i] *= scale_stiffness ;
-}
-
 /// DECLARE STATIC MEMBER VARIABLES ///
-template< class T , std::size_t N >
-std::size_t Spring<T,N>::num_stiffness_tension ;
-template< class T , std::size_t N >
-std::size_t Spring<T,N>::num_stiffness_compression ;
+// none to declare
 
 ////////////////////////////////////////////////////////////
 ////////////////////// SPRING NETWORK //////////////////////
@@ -533,8 +483,6 @@ void SpringNetwork<T,N>::setup( const NetworkParameters & network_parameters )
 	uni_1_1 = std::uniform_real_distribution<T>(-1.0,+1.0) ;
 	num_points  = network_parameters.num_points ;
 	num_springs = network_parameters.num_springs ;
-	Spring<T,N>::num_stiffness_tension = network_parameters.num_stiffness_tension ;
-	Spring<T,N>::num_stiffness_compression = network_parameters.num_stiffness_compression ;
 	points  = std::vector<  Point<T,N> >( num_points  ) ;
 	springs = std::vector< Spring<T,N> >( num_springs ) ;
 	nodes   = std::vector<        Node >( num_points  ) ;
@@ -580,22 +528,21 @@ void SpringNetwork<T,N>::load_network_binary( const char * file_nodes ,
 	// springs
 	if( file_springs != NULL ) {
 		file_ptr = std::fopen( file_springs , "rb" ) ;
-		read_data_uint32  = new std::uint32_t [2        ] ;
-		read_data_uint8   = new std::uint8_t  [5        ] ;
+		read_data_uint32  = new std::uint32_t [2] ;
+		read_data_uint8   = new std::uint8_t  [4] ;
 		for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 			std::fread( read_data_uint32 , sizeof(std::uint32_t) , 2 , file_ptr ) ;
-			std::fread( read_data_uint8  , sizeof(std::uint8_t)  , 1 , file_ptr ) ;
+			std::fread( read_data_uint8  , sizeof(std::uint8_t)  , 4 , file_ptr ) ;
 			NFLPT = read_data_uint8[2] ;
 			NFLPC = read_data_uint8[3] ;
 			read_data_T = new T [1+NFLPT+NFLPC] ;
 			std::fread( read_data_T , sizeof(T) , 1+NFLPT+NFLPC , file_ptr ) ;
 			s->start = &points[ read_data_uint32[0] ] ;
 			s->end   = &points[ read_data_uint32[1] ] ;
-			s->force_length_type_tension     = static_cast<Spring<T,N>::ForceLengthRelationship>(read_data_uint8[0]) ;
-			s->force_length_type_compression = static_cast<Spring<T,N>::ForceLengthRelationship>(read_data_uint8[1]) ;
+			s->force_length_type_tension     = static_cast<typename Spring<T,N>::ForceLengthRelationship>(read_data_uint8[0]) ;
+			s->force_length_type_compression = static_cast<typename Spring<T,N>::ForceLengthRelationship>(read_data_uint8[1]) ;
 			s->num_force_length_parameters_tension     = NFLPT ;
 			s->num_force_length_parameters_compression = NFLPC ;
-			s->allow_compression = ( read_data_uint8[4] == 1 ) ;
 			s->rest_length = read_data_T[0] ;
 			s->force_length_parameters_tension     = std::vector<T>( &read_data_T[1      ] , &read_data_T[1+NFLPT      ] ) ;
 			s->force_length_parameters_compression = std::vector<T>( &read_data_T[1+NFLPT] , &read_data_T[1+NFLPT+NFLPC] ) ;
@@ -642,8 +589,8 @@ void SpringNetwork<T,N>::save_network_binary( const char * file_nodes ,
 	// springs
 	if( file_springs != NULL ) {
 		file_ptr = std::fopen( file_springs , "wb" ) ;
-		write_data_uint32 = new std::uint32_t [2        ] ;
-		write_data_uint8  = new std::uint8_t  [5        ] ;
+		write_data_uint32 = new std::uint32_t [2] ;
+		write_data_uint8  = new std::uint8_t  [4] ;
 		for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 			NFLPT = s->num_force_length_parameters_tension ;
 			NFLPC = s->num_force_length_parameters_compression ;
@@ -654,12 +601,11 @@ void SpringNetwork<T,N>::save_network_binary( const char * file_nodes ,
 			write_data_uint8[1] = static_cast<std::uint8_t>( s->force_length_type_compression ) ;
 			write_data_uint8[2] = static_cast<std::uint8_t>( NFLPT ) ;
 			write_data_uint8[3] = static_cast<std::uint8_t>( NFLPC ) ;
-			write_data_uint8[4] = static_cast<std::uint8_t>( s->allow_compression ) ;
 			write_data_T[0] = s->rest_length ;
 			std::copy( s->force_length_parameters_tension.begin()     , s->force_length_parameters_tension.end()     , &write_data_T[1      ] ) ;
 			std::copy( s->force_length_parameters_compression.begin() , s->force_length_parameters_compression.end() , &write_data_T[1+NFLPT] ) ;
 			std::fwrite( write_data_uint32 , sizeof(std::uint32_t) , 2             , file_ptr ) ;
-			std::fwrite( write_data_uint8  , sizeof(std::uint8_t)  , 5             , file_ptr ) ;
+			std::fwrite( write_data_uint8  , sizeof(std::uint8_t)  , 4             , file_ptr ) ;
 			std::fwrite( write_data_T      , sizeof(T)             , 1+NFLPT+NFLPC , file_ptr ) ;
 			delete [] write_data_T ;
 		}
@@ -765,12 +711,15 @@ void SpringNetwork<T,N>::get_scale_network( void )
 template< class T , std::size_t N >
 void SpringNetwork<T,N>::rescale_network( const int & direction )
 {
+	T scale_length_inv ;
+	T scale_force_inv ;
+	T scale_stiffness_inv ;
 	switch( direction ) {
 		case +1:
 			// set to normalize scale from original scale
-			T scale_length_inv = static_cast<T>(1) / scale_length ;
-			T scale_force_inv = static_cast<T>(1) / scale_force ;
-			T scale_stiffness_inv = static_cast<T>(1) / scale_stiffness ;
+			scale_length_inv = static_cast<T>(1) / scale_length ;
+			scale_force_inv = static_cast<T>(1) / scale_force ;
+			scale_stiffness_inv = static_cast<T>(1) / scale_stiffness ;
 			for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
 				p->position -= scale_position_min ;
 				p->position *= scale_length_inv ;
