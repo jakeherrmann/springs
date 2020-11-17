@@ -97,7 +97,8 @@ class Agent_Fibroblast(Agent):
 		#TODO better to make strain and strain energy rate properties of wall that can be sensed
 		for spring in self.wall.structure.springs:
 			if not spring.broken:
-				K = spring.stiffness_tension[0]
+				spring.calc_force()
+				K = spring.effective_spring_constant
 				if K>0.0:
 					# strain = spring.strain
 					# if self.strain_prev is None:
@@ -109,4 +110,4 @@ class Agent_Fibroblast(Agent):
 					delta_K = delta_K if delta_K > -K else -K
 					# self.strain_prev = strain
 					ratio_K = 1.0 + delta_K/K
-					spring.stiffness_tension = [ k*ratio_K for k in spring.stiffness_tension ]
+					spring.modify_spring_constant(ratio_K,modify_tension=True,modify_compression=True)

@@ -53,10 +53,10 @@ for ss = 1 : network_param.num_springs
 	fwrite( fid , springs.nodes(ss,:)-1                                  , 'uint32'                ) ;
 	fwrite( fid , springs.force_length_type_tension(ss)                  , 'uint8'                 ) ;
 	fwrite( fid , springs.force_length_type_compression(ss)              , 'uint8'                 ) ;
-	fwrite( fid , numel(springs.force_length_parameters_tension{ss}    ) , 'uint8'                 ) ;
-	fwrite( fid , numel(springs.force_length_parameters_compression{ss}) , 'uint8'                 ) ;
 	fwrite( fid , springs.rest_length(ss)                                , network_param.precision ) ;
+	fwrite( fid , numel(springs.force_length_parameters_tension{ss}    ) , 'uint32'                ) ;
 	fwrite( fid , springs.force_length_parameters_tension{ss}            , network_param.precision ) ;
+	fwrite( fid , numel(springs.force_length_parameters_compression{ss}) , 'uint32'                ) ;
 	fwrite( fid , springs.force_length_parameters_compression{ss}        , network_param.precision ) ;
 end
 fclose( fid ) ;

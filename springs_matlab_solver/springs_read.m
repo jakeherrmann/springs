@@ -58,13 +58,14 @@ fclose( fid ) ;
 filename = file_springs ;
 fid = fopen( filename ,'rb') ;
 for ss = 1 : network_param.num_springs
-	springs.nodes(ss,:)                             = fread( fid , 2       , 'uint32'                ) + 1 ;
-	springs.force_length_type_tension(ss)           = fread( fid , 1       , 'uint8'                 ) ;
-	springs.force_length_type_compression(ss)       = fread( fid , 1       , 'uint8'                 ) ;
-	NFLP                                            = fread( fid , 2       , 'uint8'                 ) ;
-	springs.rest_length(ss)                         = fread( fid , 1       , network_param.precision ) ;
-	springs.force_length_parameters_tension{ss}     = fread( fid , NFLP(1) , network_param.precision ) ;
-	springs.force_length_parameters_compression{ss} = fread( fid , NFLP(2) , network_param.precision ) ;
+	springs.nodes(ss,:)                             = fread( fid , 2     , 'uint32'                ) + 1 ;
+	springs.force_length_type_tension(ss)           = fread( fid , 1     , 'uint8'                 ) ;
+	springs.force_length_type_compression(ss)       = fread( fid , 1     , 'uint8'                 ) ;
+	springs.rest_length(ss)                         = fread( fid , 1     , network_param.precision ) ;
+	NFLPT                                           = fread( fid , 1     , 'uint32'                ) ;
+	springs.force_length_parameters_tension{ss}     = fread( fid , NFLPT , network_param.precision ) ;
+	NFLPC                                           = fread( fid , 1     , 'uint32'                ) ;
+	springs.force_length_parameters_compression{ss} = fread( fid , NFLPC , network_param.precision ) ;
 end
 fclose( fid ) ;
 

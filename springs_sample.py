@@ -9,7 +9,7 @@ import springs_biology as bio
 def main(argv):
 	
 	# create geometry for spring network and anatomical structures
-	setup_type = 'truncoct_3D'
+	setup_type = 'hexagon_2D'
 
 	if setup_type=='hexagon_2D':
 		net = spr.make_geom_hexagon_2D([28,24])
@@ -28,7 +28,7 @@ def main(argv):
 		for spring in net.springs:
 			spring.rest_length *= max(0.1, random.gauss(1.0,0.2))
 			k_mod = max(0.1, random.gauss(1.0,0.2))
-			spring.stiffness_tension = [ k*k_mod for k in spring.stiffness_tension ]
+			spring.force_length_parameters_tension = [ k*k_mod for k in spring.force_length_parameters_tension ]
 
 	elif setup_type=='truncoct_3D':
 		net = spr.make_geom_truncoct_3D([2,2,2], split_walls_into_triangles=True)
@@ -45,7 +45,7 @@ def main(argv):
 		for spring in net.springs:
 			spring.rest_length *= max(0.1, random.gauss(1.0,0.2))
 			k_mod = max(0.1, random.gauss(1.0,0.2))
-			spring.stiffness_tension = [ k*k_mod for k in spring.stiffness_tension ]
+			spring.force_length_parameters_tension = [ k*k_mod for k in spring.force_length_parameters_tension ]
 
 	elif setup_type=='file':
 		net = spr.SpringNetwork()
@@ -58,8 +58,10 @@ def main(argv):
 		return
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-	net.solver_algorithm = 'newton'
-	net.solver_tolerance_change_energy = 1.0E-3
+	net.solver_algorithm = 'steepest'
+	net.solver_objective = 'maxforce'
+	net.solver_tolerance_change_objective = 1.0E-16
+	net.solver_tolerance_sum_net_force = 1.0E-16
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 	using_stretch_profile = False
@@ -71,9 +73,16 @@ def main(argv):
 			spring_network=net,
 			spring_break_variable=None,
 			spring_break_threshold=4.0)
+		# ax_lims = (
+		# 	(42.5*(1.0-1.8)/2.0,42.5*(1.0+1.8)/2.0),
+		# 	(42.5*(1.0-1.8)/2.0,42.5*(1.0+1.8)/2.0))
 		ax_lims = (
-			(42.5*(1.0-1.8)/2.0,42.5*(1.0+1.8)/2.0),
-			(42.5*(1.0-1.8)/2.0,42.5*(1.0+1.8)/2.0))
+			(42.5*(1.0-2.5)/2.0,42.5*(1.0+2.5)/2.0),
+			(42.5*(1.0-2.5)/2.0,42.5*(1.0+2.5)/2.0))
+		# ax_lims = (
+		# 	(-4.0,12.0),
+		# 	(-4.0,12.0),
+		# 	(-4.0,12.0))
 
 		# note, this adds a fibroblast to every WALL, i.e., both sides of the same septal wall, i.e., two fibroblasts for each structure.
 		lung.add_fibroblast_every_wall()
@@ -87,20 +96,23 @@ def main(argv):
 						if wall not in other_wall.adjacent_walls:
 							other_wall.adjacent_walls.append( wall )
 		
-		force_min = 0.425 ; force_max = 0.475
+		# force_min = 0.425 ; force_max = 0.475
+		force_min = 0.425 ; force_max = 0.525
 		time_cycle = 5.0
 		num_forces = 2
-		num_cycles = 1
+		num_cycles = 600
 		iter_total = 0
 		for b in net.boundaries:
 			b.force_magnitudes = [force_min] * len(b.nodes)
 		lung.stretch(1.0, dimensions=None, boundary_indexes=None)
 		bio.display(lung,
-			color_variable='stiffness_tension',
+			color_variable=None,
 			color_range=(-0.05,20.0),
+			show_agents=False,
 			ax_lims=ax_lims,
 			delay=None,
 			save_file_name=Path('.')/'..'/'breath_{:02d}.png'.format(0),
+			dpi=300,
 			show=False)
 		lung.save( Path('.')/'..'/'SAVE'/'STRETCH_{:04d}'.format(iter_total) )
 		for iter_cycle in range(num_cycles):
@@ -111,7 +123,8 @@ def main(argv):
 			for b in net.boundaries:
 				b.force_magnitudes = [force_max] * len(b.nodes)
 			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-			lung.save( Path('.')/'..'/'STRETCH_{:04d}'.format(iter_total) )
+			if (iter_cycle+1) % 10 == 0:
+				lung.save( Path('.')/'..'/'STRETCH_{:04d}'.format(iter_total) )
 			spring_strains_in = [ spring.strain for spring in lung.net.springs ]
 			current_stretch = sum(spring_strains_in) / len(spring_strains_in)
 			print( ('IN:  '
@@ -124,7 +137,8 @@ def main(argv):
 			for b in net.boundaries:
 				b.force_magnitudes = [force_min] * len(b.nodes)
 			lung.stretch(1.0, dimensions=None, boundary_indexes=None)
-			lung.save( Path('.')/'..'/'STRETCH_{:04d}'.format(iter_total) )
+			if (iter_cycle+1) % 10 == 0:
+				lung.save( Path('.')/'..'/'STRETCH_{:04d}'.format(iter_total) )
 			spring_strains_ex = [ spring.strain for spring in lung.net.springs ]
 			current_stretch = sum(spring_strains_ex) / len(spring_strains_ex)
 			print( ('EX:  '
@@ -136,7 +150,7 @@ def main(argv):
 			spring_strains_mean  = [ 0.5*(i+e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
 			spring_strains_delta = [  abs(i-e) for i, e in zip(spring_strains_in, spring_strains_ex) ]
 			spring_strain_energy_rates = [ ((i**2)-(e**2))/time_cycle for i, e in zip(spring_strains_in, spring_strains_ex) ]
-			spring_strain_energy_rates = [ r*(s.rest_length**2)*s.stiffness_tension[0] for s, r in zip(lung.net.springs, spring_strain_energy_rates) ]
+			spring_strain_energy_rates = [ r*(s.rest_length**2)*s.force_length_parameters_tension[0] for s, r in zip(lung.net.springs, spring_strain_energy_rates) ]
 			print( ('{:07.3f} mean average strain, '
 					'{:07.5f} mean average strain energy rate').format(
 					sum(spring_strains_mean)/len(spring_strains_mean),
@@ -152,14 +166,16 @@ def main(argv):
 				agent.strain = statistics.mean( [ spring_strains_mean[si] for si in agent.wall.structure.springs_indexes ] )
 				agent.strain_energy_rate = statistics.mean( [ spring_strain_energy_rates[si] for si in agent.wall.structure.springs_indexes ] )
 			lung.agent_actions( time_cycle )
-			lung.net.break_spring('stiffness_tension', 0.0, relop='<=')
-			if (iter_cycle+1) % 5 is 0:
+			lung.net.break_spring('force_length_parameters_tension', 0.0, relop='<=')
+			if (iter_cycle+1) % 10 == 0:
 				bio.display(lung,
-					color_variable='stiffness_tension',
-					color_range=(-0.05,20.0),
+					color_variable='effective_spring_constant',
+					color_range=(-0.05,5.0),
+					show_agents=False,
 					ax_lims=ax_lims,
 					delay=None,
 					save_file_name=Path('.')/'..'/'breath_{:02d}.png'.format(iter_cycle+1),
+					dpi=300,
 					show=False)
 		return
 
@@ -178,7 +194,7 @@ def main(argv):
 		num_cycles = 50
 		lung.stretch(1.0, dimensions='all', boundary_indexes=None)
 		spr.display(lung.net,
-			color_variable='stiffness_tension',
+			color_variable=None,
 			color_range=(-0.05,5.0),
 			ax_lims=((15.0-20.0,15.0+20.0),(15.0-20.0,15.0+20.0)),
 			delay=None,
@@ -194,7 +210,7 @@ def main(argv):
 				lung.save( Path('.')/'..'/'SAVE'/'STRETCH_{:04d}'.format(iter_total) )
 				lung.agent_actions( time_step )
 			spr.display(lung.net,
-				color_variable='stiffness_tension',
+				color_variable=None,
 				color_range=(-0.05,5.0),
 				ax_lims=((0.0,36.0),(0.0,36.0)),
 				delay=None,

@@ -17,11 +17,11 @@ def display(lung, show_slice=False, **kwargs):
 		else:
 			display_3D(lung, **kwargs)
 
-def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True):
+def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show_agents=True, show=True, dpi=300):
 	spring_network = lung.net
 	cmap = plt.get_cmap('inferno')
 	if color_variable is None:
-		c = [(0.0,0.0,0.0)] * len(spring_network.springs)
+		colors = [(0.0,0.0,0.0)] * len(spring_network.springs)
 	else:
 		if hasattr(spring_network.springs[0], color_variable):
 			if isinstance(getattr(spring_network.springs[0],color_variable), list):
@@ -67,7 +67,7 @@ def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 	# 	edgecolor=(0.0,0.0,0.0),
 	# 	facecolor='None')
 
-	if lung.agents:
+	if show_agents and lung.agents:
 		agent_positions = np.array( [ np.mean( np.array( [ n.position for n in a.wall.structure.nodes ] ) ,axis=0) for a in lung.agents ] )
 		plt.scatter(
 			agent_positions[:,0],
@@ -77,7 +77,7 @@ def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 			facecolor=(0.0,0.0,0.0))
 	
 	if save_file_name is not None:
-		plt.savefig(save_file_name)
+		plt.savefig(save_file_name, dpi=dpi)
 	if not show:
 		plt.close(plt.gcf())
 	else:
@@ -87,7 +87,7 @@ def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 			plt.draw()
 			plt.pause(delay)
 
-def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True, structures=None):
+def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True, structures=None, dpi=300):
 	spring_network = lung.net
 	plane_point  = np.array([2.0, 2.0, 5.0])
 	plane_normal = np.array([0.0, 0.0, 1.0])
@@ -158,7 +158,7 @@ def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, 
 		ax.set_ylim(ax_lims[1][0], ax_lims[1][1])
 	ax.add_collection( mplcol.LineCollection(xyz_segments, colors=c) )
 	if save_file_name is not None:
-		plt.savefig(save_file_name)
+		plt.savefig(save_file_name, dpi=dpi)
 	if not show:
 		plt.close(plt.gcf())
 	else:
@@ -168,7 +168,7 @@ def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, 
 			plt.draw()
 			plt.pause(delay)
 
-def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=False, show=True, structures=None):
+def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=False, show_agents=True, show=True, structures=None, dpi=300):
 	spring_network = lung.net
 	xyz_segments = [
 		np.stack([
@@ -185,7 +185,7 @@ def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 		projection='3d',
 		proj_type='ortho')
 	ax.set_position((0.0,0.0,1.0,1.0))
-	ax.set_aspect('equal')
+	#ax.set_aspect('equal')
 	if ax_lims is not None:
 		ax.set_xlim(ax_lims[0][0], ax_lims[0][1])
 		ax.set_ylim(ax_lims[1][0], ax_lims[1][1])
@@ -268,7 +268,7 @@ def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 	# 	edgecolor=(0.0,0.0,0.0),
 	# 	facecolor='None')
 
-	if lung.agents:
+	if show_agents and lung.agents:
 		agent_positions = np.array( [ np.mean( np.array( [ n.position for n in a.wall.structure.nodes ] ) ,axis=0) for a in lung.agents ] )
 		ax.scatter(
 			agent_positions[:,0],
@@ -279,7 +279,7 @@ def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 			facecolor=(0.0,0.0,0.0))
 
 	if save_file_name is not None:
-		plt.savefig(save_file_name)
+		plt.savefig(save_file_name, dpi=dpi)
 	if not show:
 		plt.close(plt.gcf())
 	else:

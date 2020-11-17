@@ -35,8 +35,6 @@ public:
 	std::size_t num_springs = 0 ;
 	std::string precision = "double" ;
 	std::size_t num_dimensions = 2 ;
-	std::size_t num_stiffness_tension     = 0 ;
-	std::size_t num_stiffness_compression = 0 ;
 	//
 	std::string algorithm = "newton" ;
 	std::string objective = "energy" ;
