@@ -14,9 +14,9 @@ addpath( 'springs_matlab_visualizer' )
 %% parameters for rectangular grid
 
 num_row = 20 ;
-num_col = 15 ;
+num_col = 30 ;
 k_mean = 1.0 ;
-k_stdv = 0.0 ;
+k_stdv = 0.4 ;
 L0_mean = 1.0 ;
 L0_stdv = 0.0 ;
 
@@ -77,8 +77,6 @@ boundary{4} = setdiff( boundary{4} , [boundary{1};boundary{2}] ) ;
 % overall parameters
 num_dimensions = 2 ;            % number of spatial dimensions
 precision = 'double' ;          % floating point precision: 'single' or 'double'
-num_stiffness_tension = 1 ;     % number of polynomial stiffness coefficients for tension
-num_stiffness_compression = 1 ; % number of polynomial stiffness coefficients for compression
 
 % size of network
 num_points = size(loc,1) ;
@@ -101,25 +99,28 @@ nodes.fixed( boundary{4} ,:) = true ;
 % these are the only mandatory properties of springs data structure.
 % the springs_solve() command will ignore any other properties.
 % you may add any additional properties as desired.
-springs.nodes                 = zeros( [ num_springs , 2                         ] ) ;
-springs.rest_length           = zeros( [ num_springs , 1                         ] ) ;
-springs.stiffness_tension     = zeros( [ num_springs , num_stiffness_tension     ] ) ;
-springs.stiffness_compression = zeros( [ num_springs , num_stiffness_compression ] ) ;
-springs.compression           = zeros( [ num_springs , 1                         ] ) ;
+springs.nodes                               = zeros( [ num_springs , 2 ] ) ;
+springs.rest_length                         = zeros( [ num_springs , 1 ] ) ;
+springs.force_length_type_tension           = zeros( [ num_springs , 1 ] ) ;
+springs.force_length_type_compression       = zeros( [ num_springs , 1 ] ) ;
+springs.force_length_parameters_tension     =  cell( [ num_springs , 1 ] ) ;
+springs.force_length_parameters_compression =  cell( [ num_springs , 1 ] ) ;
 
 % assign values computed in previous section
 springs.nodes = spring_nodes ;
 springs.rest_length(:) = spring_rest_length ;
-springs.stiffness_tension(:,1) = spring_stiffness ;
-springs.stiffness_compression(:,1) = spring_stiffness ;
-springs.compression(:) = true ;
+springs.force_length_type_tension(:) = 1 ; % none=0, polynomial=1, exponential=2, powerlaw=3
+springs.force_length_parameters_tension = mat2cell( spring_stiffness , ones([num_springs,1]) , size(spring_stiffness,2) ) ;
+springs.force_length_type_compression(:) = 1 ; % none=0, polynomial=1, exponential=2, powerlaw=3
+springs.force_length_parameters_compression = mat2cell( spring_stiffness , ones([num_springs,1]) , size(spring_stiffness,2) ) ;
 
 %% SOLVE EQUILIBRIUM (NO FORCES)
 
 % solver parameters not specified are treated as default.
 options = springs_default_options() ;
-options.algorithm = 'anneal' ;
+options.algorithm = 'steepest' ;
 options.objective = 'maxforce' ;
+options.use_numerical_hessian = true ;
 options.include_force_fixed_nodes = false ;
 options.num_iter_print = 10000 ;
 options.tolerance_change_objective = 1e-24 ;

@@ -9,7 +9,7 @@ length = sqrt(sum(power( delta_position ,2),2)) ;
 delta_length = length - springs.rest_length ;
 force = zeros( [num_springs,1] ) ;
 for ss = 1 : num_springs
-	if delta_length == 0.0
+	if delta_length(ss) == 0.0
 		% spring at rest
 		continue ;
 	elseif delta_length(ss) > 0.0

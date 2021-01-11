@@ -25,7 +25,7 @@ if ~exist( dir_output ,'dir')
 end
 
 springs_write( dir_input , nodes , springs , options ) ;
-sys_command = sprintf( '%s %s %s --verbose 1' , exe_springs_solver , dir_input , dir_output ) ;
+sys_command = sprintf( '%s %s %s --verbose 1 --parallel 1' , exe_springs_solver , dir_input , dir_output ) ;
 system(sys_command) ;
 [ nodes , springs ] = springs_read( dir_output ) ;
 

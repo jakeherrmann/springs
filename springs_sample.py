@@ -62,6 +62,7 @@ def main(argv):
 	net.solver_objective = 'maxforce'
 	net.solver_tolerance_change_objective = 1.0E-16
 	net.solver_tolerance_sum_net_force = 1.0E-16
+	net.solver_num_threads = 6 ;
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 	using_stretch_profile = False
@@ -100,7 +101,7 @@ def main(argv):
 		force_min = 0.425 ; force_max = 0.525
 		time_cycle = 5.0
 		num_forces = 2
-		num_cycles = 600
+		num_cycles = 1 #600
 		iter_total = 0
 		for b in net.boundaries:
 			b.force_magnitudes = [force_min] * len(b.nodes)

@@ -8,6 +8,7 @@ numeric_args = {
 	'num_points'
 	'num_springs'
 	'num_dimensions'
+	'num_threads'
 	'num_stiffness_tension'
 	'num_stiffness_compression'
 	'num_iter_save'

@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "vectors_nd.hpp"
+#include "klein_summer.hpp"
 #include "spmat.hpp"
 
 ///
@@ -45,17 +46,22 @@ public:
 	bool use_numerical_hessian = false ;
 	double tolerance_change_objective = 1.0e-12 ;
 	double tolerance_sum_net_force = 1.0e-12 ;
+	//
+	bool parallelism_enabled = true ;
+	std::size_t user_num_threads = 4 ;
 
 	//
 	NetworkParameters( const std::string & , const std::string & ) ;
 	void load_parameters( const char * ) ;
 	void save_parameters( const char * ) ;
+	void setup_multithreading( const int ) ;
 } ;
 
 ///
 template< class T , std::size_t N >
 class Point {
 public:
+	int node_index = -1 ;
 	Vector<T,N> position ;
 	Vector<T,N> force_applied ;
 	Vector<T,N> net_force ;
@@ -84,14 +90,16 @@ public:
 	T effective_spring_constant ;
 	T length ;
 	T rest_length ;
+	T energy ;
 	Vector<T,N> force ;
+	Vector<T,N> delta_position ;
 public:
 	T spring_energy( void ) ;
 	void spring_tension( const T & , T & , T & ) ;
 	void spring_compression( const T & , T & , T & ) ;
-	static void spring_force_polynomial( const T & , const std::size_t & , const std::vector<T> & , T & , T & ) ;
-	static void spring_force_exponential( const T & , const std::size_t & , const std::vector<T> & , T & , T & ) ;
-	static void spring_force_powerlaw( const T & , const std::size_t & , const std::vector<T> & , T & , T & ) ;
+	static void spring_force_polynomial( const T & , const std::size_t & , const std::vector<T> & , T & , T & , T & ) ;
+	static void spring_force_exponential( const T & , const std::size_t & , const std::vector<T> & , T & , T & , T & ) ;
+	static void spring_force_powerlaw( const T & , const std::size_t & , const std::vector<T> & , T & , T & , T & ) ;
 	T spring_stiffness_rest( void ) ;
 	static T spring_stiffness_rest_polynomial( const std::size_t & , const std::vector<T> & ) ;
 	static T spring_stiffness_rest_exponential( const std::size_t & , const std::vector<T> & ) ;
@@ -106,7 +114,7 @@ class ASpringNetwork {
 public:
 	std::size_t num_iter_save = 0 ;
 	virtual void setup( const NetworkParameters & ) = 0 ;
-	virtual void solve( void ) = 0 ;
+	virtual void solve( void ) = 0 ;	
 	static std::unique_ptr<ASpringNetwork> create_spring_network_obj( const NetworkParameters & ) ;
 } ;
 
@@ -115,7 +123,7 @@ template< class T , std::size_t N >
 class SpringNetwork : public ASpringNetwork {
 	// graph data structures
 	struct Link {
-		std::size_t node_index ;
+		int node_index ;
 		Point<T,N> * point ;
 		Spring<T,N> * spring ;
 		T spring_direction ;
@@ -143,12 +151,13 @@ private:
 	//
 	std::size_t num_points ;
 	std::size_t num_springs ;
-	std::vector<  Point<T,N> > points ;
-	std::vector<  Point<T,N> > points_init ;
-	std::vector<  Point<T,N> > points_prev ;
-	std::vector<  Point<T,N> > points_best ;
-	std::vector< Spring<T,N> > springs ;
-	std::vector<        Node > nodes ;
+	std::vector<  Point<T,N>   > points ;
+	std::vector<  Point<T,N>   > points_init ;
+	std::vector<  Point<T,N>   > points_prev ;
+	std::vector<  Point<T,N>   > points_best ;
+	std::vector< Spring<T,N>   > springs ;
+	std::vector<        Node   > nodes ;
+	std::vector< Spring<T,N> * > springs_used ;
 	//
 	std::default_random_engine rng ;
 	std::uniform_real_distribution<T> uni_0_1 ;
@@ -176,16 +185,24 @@ private:
 	std::vector<T> neg_gradient ;
 	std::vector<T> step_direction ;
 	spmat<T> hessian ;
+	//
+	KleinSummer<T> ksum ;
+	//
+	bool parallelism_enabled = true ;
+	std::size_t num_threads ;
 public:
 	//
+	void update_springs( void ) ; // new
+	void update_forces( void ) ; // new
 	T total_energy( void ) ;
+	T get_objective( void ) ; // new
 	void move_points_newton( const T & ) ;
 	void move_points_force( const T & ) ;
 	void move_points_rand( const T & ) ;
 	bool test_reboot( void ) ;
 	bool accept_new_points( const T & , const T & ) ;
 	void find_max_spring_length( void ) ;
-	T heat_up( const T & , const T & ) ;
+	T heat_up( const T & , const std::size_t & ) ;
 	void solve( void ) ;
 	void anneal( void ) ;
 	void minimize_energy( void ) ;

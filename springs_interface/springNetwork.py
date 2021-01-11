@@ -40,6 +40,7 @@ class SpringNetwork:
 		self.dir_solver_output = None
 		self.solver_algorithm = 'newton'
 		self.solver_objective = 'energy'
+		self.solver_num_threads = 4
 		self.solver_num_iter_save = 0
 		self.solver_num_iter_print = 0
 		self.solver_num_iter_max = 0
@@ -88,6 +89,7 @@ class SpringNetwork:
 			springs_setup.main('')
 		sys_command = str(exe_springs_solver) + ' ' + str(dir_input) + ' ' + str(dir_output)
 		sys_command += ' --verbose 1'
+		sys_command += ' --parallel 1'
 		print(sys_command)
 		os.system(sys_command)
 
@@ -106,6 +108,7 @@ class SpringNetwork:
 			file.write(             'num_dimensions {:d}\n'.format(self.num_dimensions))
 			file.write(                  'algorithm {:s}\n'.format(self.solver_algorithm))
 			file.write(                  'objective {:s}\n'.format(self.solver_objective))
+			file.write(                'num_threads {:d}\n'.format(self.solver_num_threads))
 			file.write(              'num_iter_save {:d}\n'.format(self.solver_num_iter_save))
 			file.write(             'num_iter_print {:d}\n'.format(self.solver_num_iter_print))
 			file.write(               'num_iter_max {:d}\n'.format(self.solver_num_iter_max))
@@ -149,6 +152,7 @@ class SpringNetwork:
 					elif arg[0]=="num_dimensions"             : self.num_dimensions                    =   int(arg[1])
 					elif arg[0]=="algorithm"                  : self.solver_algorithm                  =       arg[1]
 					elif arg[0]=="objective"                  : self.solver_objective                  =       arg[1]
+					elif arg[0]=="num_threads"                : self.solver_num_threads                =   int(arg[1])
 					elif arg[0]=="num_iter_save"              : self.solver_num_iter_save              =   int(arg[1])
 					elif arg[0]=="num_iter_print"             : self.solver_num_iter_print             =   int(arg[1])
 					elif arg[0]=="num_iter_max"               : self.solver_num_iter_max               =   int(arg[1])

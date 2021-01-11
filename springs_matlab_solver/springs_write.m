@@ -18,6 +18,7 @@ numeric_args = {
 	'num_points'
 	'num_springs'
 	'num_dimensions'
+	'num_threads'
 	'num_iter_save'
 	'num_iter_print'
 	'num_iter_max'
