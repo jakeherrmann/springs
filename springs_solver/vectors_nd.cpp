@@ -12,21 +12,21 @@
 
 // indexing
 template< class T , std::size_t N >
-T Vector<T,N>::operator[]( const std::size_t & index )
+inline T Vector<T,N>::operator[]( const std::size_t index )
 const
 {
 	return x[index] ;
 }
 
 template< class T , std::size_t N >
-T & Vector<T,N>::operator[]( const std::size_t & index )
+inline T & Vector<T,N>::operator[]( const std::size_t index )
 {
 	return x[index] ;
 }
 
 // scalar assignment
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator=( const T & a )
+inline Vector<T,N> & Vector<T,N>::operator=( const T a )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] = a ;
@@ -36,7 +36,7 @@ Vector<T,N> & Vector<T,N>::operator=( const T & a )
 
 // elementwise boolean multiplication
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::zero_where( const Vector<bool,N> & y )
+inline Vector<T,N> Vector<T,N>::zero_where( const Vector<bool,N> & y )
 const
 {
 	Vector<T,N> v ;
@@ -46,7 +46,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::zero_where_not( const Vector<bool,N> & y )
+inline Vector<T,N> Vector<T,N>::zero_where_not( const Vector<bool,N> & y )
 const
 {
 	Vector<T,N> v ;
@@ -58,7 +58,7 @@ const
 
 // dot product of two vectors
 template< class T , std::size_t N >
-T Vector<T,N>::dot( const Vector<T,N> & y )
+inline T Vector<T,N>::dot( const Vector<T,N> & y )
 const
 {
 	T s = static_cast<T>(0) ;
@@ -70,7 +70,7 @@ const
 
 // distance between two points
 template< class T , std::size_t N >
-T Vector<T,N>::distance( const Vector<T,N> & y )
+inline T Vector<T,N>::distance( const Vector<T,N> & y )
 const
 {
 	T d ;
@@ -84,7 +84,7 @@ const
 
 // vector norm
 template< class T , std::size_t N >
-T Vector<T,N>::norm( void )
+inline T Vector<T,N>::norm( void )
 const
 {
 	T s = static_cast<T>(0) ;
@@ -96,7 +96,7 @@ const
 
 // max and min
 template< class T , std::size_t N >
-T Vector<T,N>::max( void )
+inline T Vector<T,N>::max( void )
 const
 {
 	T s = x[0] ;
@@ -106,7 +106,7 @@ const
 	return s ;
 }
 template< class T , std::size_t N >
-T Vector<T,N>::min( void )
+inline T Vector<T,N>::min( void )
 const
 {
 	T s = x[0] ;
@@ -119,7 +119,7 @@ const
 
 // addition of two vectors
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator+( const Vector<T,N> & y )
+inline Vector<T,N> Vector<T,N>::operator+( const Vector<T,N> & y )
 const
 {
 	Vector<T,N> v ;
@@ -129,7 +129,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator+=( const Vector<T,N> & y )
+inline Vector<T,N> & Vector<T,N>::operator+=( const Vector<T,N> & y )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] += y[n] ;
@@ -139,7 +139,7 @@ Vector<T,N> & Vector<T,N>::operator+=( const Vector<T,N> & y )
 
 // subtraction of two vectors
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator-( const Vector<T,N> & y )
+inline Vector<T,N> Vector<T,N>::operator-( const Vector<T,N> & y )
 const
 {
 	Vector<T,N> v ;
@@ -149,7 +149,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator-=( const Vector<T,N> & y )
+inline Vector<T,N> & Vector<T,N>::operator-=( const Vector<T,N> & y )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] -= y[n] ;
@@ -159,7 +159,7 @@ Vector<T,N> & Vector<T,N>::operator-=( const Vector<T,N> & y )
 
 // elementwise multiplication of two vectors
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator*( const Vector<T,N> & y )
+inline Vector<T,N> Vector<T,N>::operator*( const Vector<T,N> & y )
 const
 {
 	Vector<T,N> v ;
@@ -169,7 +169,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator*=( const Vector<T,N> & y )
+inline Vector<T,N> & Vector<T,N>::operator*=( const Vector<T,N> & y )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] *= y[n] ;
@@ -179,7 +179,7 @@ Vector<T,N> & Vector<T,N>::operator*=( const Vector<T,N> & y )
 
 // elementwise division of two vectors
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator/( const Vector<T,N> & y )
+inline Vector<T,N> Vector<T,N>::operator/( const Vector<T,N> & y )
 const
 {
 	Vector<T,N> v ;
@@ -189,7 +189,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator/=( const Vector<T,N> & y )
+inline Vector<T,N> & Vector<T,N>::operator/=( const Vector<T,N> & y )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] /= y[n] ;
@@ -199,7 +199,7 @@ Vector<T,N> & Vector<T,N>::operator/=( const Vector<T,N> & y )
 
 // scalar addition to vector
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator+( const T & a )
+inline Vector<T,N> Vector<T,N>::operator+( const T a )
 const
 {
 	Vector<T,N> v ;
@@ -209,7 +209,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator+=( const T & a )
+inline Vector<T,N> & Vector<T,N>::operator+=( const T a )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] += a ;
@@ -219,7 +219,7 @@ Vector<T,N> & Vector<T,N>::operator+=( const T & a )
 
 // scalar subtraction from vector
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator-( const T & a )
+inline Vector<T,N> Vector<T,N>::operator-( const T a )
 const
 {
 	Vector<T,N> v ;
@@ -229,7 +229,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator-=( const T & a )
+inline Vector<T,N> & Vector<T,N>::operator-=( const T a )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] -= a ;
@@ -239,7 +239,7 @@ Vector<T,N> & Vector<T,N>::operator-=( const T & a )
 
 // scalar multiplication of vector
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator*( const T & a )
+inline Vector<T,N> Vector<T,N>::operator*( const T a )
 const
 {
 	Vector<T,N> v( *this ) ;
@@ -255,7 +255,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator*=( const T & a )
+inline Vector<T,N> & Vector<T,N>::operator*=( const T a )
 {
 	for( std::size_t n = 0 ; n < N ; ++n ) {
 		x[n] *= a ;
@@ -265,7 +265,7 @@ Vector<T,N> & Vector<T,N>::operator*=( const T & a )
 
 // scalar division of vector
 template< class T , std::size_t N >
-Vector<T,N> Vector<T,N>::operator/( const T & a )
+inline Vector<T,N> Vector<T,N>::operator/( const T a )
 const
 {
 	T b = static_cast<T>(1) / a ;
@@ -273,7 +273,7 @@ const
 	return v ;
 }
 template< class T , std::size_t N >
-Vector<T,N> & Vector<T,N>::operator/=( const T & a )
+inline Vector<T,N> & Vector<T,N>::operator/=( const T a )
 {
 	T b = static_cast<T>(1) / a ;
 	(*this) *= b ;

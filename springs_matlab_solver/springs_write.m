@@ -10,9 +10,9 @@ if numel(varargin) > 0
 	end
 end
 
-network_param.num_points                = size( nodes.position ,1) ;
-network_param.num_springs               = size( springs.nodes  ,1) ;
-network_param.num_dimensions            = size( nodes.position ,2) ;
+network_param.num_points     = size( nodes.position ,1) ;
+network_param.num_springs    = size( springs.nodes  ,1) ;
+network_param.num_dimensions = size( nodes.position ,2) ;
 
 numeric_args = {
 	'num_points'

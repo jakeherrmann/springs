@@ -25,10 +25,9 @@ if ~exist( dir_output ,'dir')
 end
 
 springs_write( dir_input , nodes , springs , options ) ;
-setenv( 'OMP_STACKSIZE'   , '64M'    ) ;
-setenv( 'OMP_PLACES'      , 'cores'  ) ;
-setenv( 'OMP_WAIT_POLICY' , 'active' ) ;
-setenv( 'OMP_PROC_BIND'   , 'true'   ) ;
+setenv( 'OMP_STACKSIZE' , '16M' ) ;
+setenv( 'OMP_PLACES' , 'cores' ) ;
+setenv( 'OMP_WAIT_POLICY'
 sys_command = sprintf( '%s %s %s --verbose 1 --parallel 1' , exe_springs_solver , dir_input , dir_output ) ;
 system(sys_command) ;
 [ nodes , springs ] = springs_read( dir_output ) ;

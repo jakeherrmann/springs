@@ -18,15 +18,15 @@ private:
 	
 public:
 	// access elements
-	T   operator[]( const std::size_t & ) const ; // const, cannot change indexed object
-	T & operator[]( const std::size_t & ) ;       // non-const, can change indexed object
+	T   operator[]( const std::size_t ) const ; // const, cannot change indexed object
+	T & operator[]( const std::size_t ) ;       // non-const, can change indexed object
 	
 	//
 	Vector<T,N> zero_where    ( const Vector<bool,N> & ) const ;
 	Vector<T,N> zero_where_not( const Vector<bool,N> & ) const ;
 
 	// scalar assignment
-	Vector<T,N> & operator= ( const T & ) ;
+	Vector<T,N> & operator= ( const T ) ;
 	
 	//
 	T dot( const Vector<T,N> & ) const ;
@@ -48,14 +48,14 @@ public:
 	Vector<T,N> & operator/=( const Vector<T,N> & ) ;
 	
 	// scalar operations
-	Vector<T,N>   operator+ ( const T & ) const ;
-	Vector<T,N> & operator+=( const T & ) ;
-	Vector<T,N>   operator- ( const T & ) const ;
-	Vector<T,N> & operator-=( const T & ) ;
-	Vector<T,N>   operator* ( const T & ) const ;
-	Vector<T,N> & operator*=( const T & ) ;
-	Vector<T,N>   operator/ ( const T & ) const ;
-	Vector<T,N> & operator/=( const T & ) ;
+	Vector<T,N>   operator+ ( const T ) const ;
+	Vector<T,N> & operator+=( const T ) ;
+	Vector<T,N>   operator- ( const T ) const ;
+	Vector<T,N> & operator-=( const T ) ;
+	Vector<T,N>   operator* ( const T ) const ;
+	Vector<T,N> & operator*=( const T ) ;
+	Vector<T,N>   operator/ ( const T ) const ;
+	Vector<T,N> & operator/=( const T ) ;
 } ;
 
 #endif /* vectors_nd_hpp */
