@@ -11,7 +11,6 @@
 //  ██      ██   ██ ███████  ██████  ██████  ██      ██ ██       ██████     ██    ███████ ███████ ██      ██   ██ ██   ██ ██   ██ ██      ██ ███████    ██    ███████ ██   ██ ███████ 
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
 template< class T , std::size_t N >
 void Spring<T,N>::precompute_parameters( void )
 {
@@ -75,7 +74,6 @@ void Spring<T,N>::precompute_parameters( void )
 	}
 	return ;
 }
-//*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -98,6 +96,8 @@ T Spring<T,N>::spring_energy( void )
 	energy = static_cast<T>(0) ;
 	Spring<T,N>::ForceLengthRelationship * force_length_type = NULL ;
 	std::vector<T> * force_length_parameters = NULL ;
+	std::vector<T> * energy_length_parameters = NULL ;
+	std::vector<T> * stiffness_length_parameters = NULL ;
 	if( delta_length == 0.0 ) {
 		force_magnitude = static_cast<T>(0) ;
 		energy = static_cast<T>(0) ;
@@ -106,17 +106,23 @@ T Spring<T,N>::spring_energy( void )
 		if( delta_length > 0 ) {
 			force_length_type           = & force_length_type_tension ;
 			force_length_parameters     = & force_length_parameters_tension ;
+			energy_length_parameters    = & energy_length_parameters_tension ;
+			stiffness_length_parameters = & stiffness_length_parameters_tension ;
 			force_sign = static_cast<T>(+1) ;
 		} else if( delta_length < 0 ) {
 			delta_length = std::abs( delta_length ) ;
 			force_length_type           = & force_length_type_compression ;
 			force_length_parameters     = & force_length_parameters_compression ;
+			energy_length_parameters    = & energy_length_parameters_compression ;
+			stiffness_length_parameters = & stiffness_length_parameters_compression ;
 			force_sign = static_cast<T>(-1) ;
 		}
 		switch( * force_length_type ) {
 			case Spring<T,N>::ForceLengthRelationship::polynomial :
 				Spring<T,N>::spring_force_polynomial( delta_length ,
 													  * force_length_parameters ,
+													  * energy_length_parameters ,
+													  * stiffness_length_parameters ,
 													  effective_spring_constant ,
 													  force_magnitude ,
 													  energy ) ;
@@ -124,6 +130,8 @@ T Spring<T,N>::spring_energy( void )
 			case Spring<T,N>::ForceLengthRelationship::exponential :
 				Spring<T,N>::spring_force_exponential( delta_length ,
 													   * force_length_parameters ,
+													   * energy_length_parameters ,
+													   * stiffness_length_parameters ,
 													   effective_spring_constant ,
 													   force_magnitude ,
 													   energy ) ;
@@ -131,6 +139,8 @@ T Spring<T,N>::spring_energy( void )
 			case Spring<T,N>::ForceLengthRelationship::powerlaw :
 				Spring<T,N>::spring_force_powerlaw( delta_length ,
 												    * force_length_parameters ,
+													* energy_length_parameters ,
+													* stiffness_length_parameters ,
 													effective_spring_constant ,
 												    force_magnitude ,
 												    energy ) ;
@@ -159,6 +169,8 @@ T Spring<T,N>::spring_energy( void )
 template< class T , std::size_t N >
 void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
 										   const std::vector<T> & force_length_parameters ,
+										   const std::vector<T> & energy_length_parameters ,
+										   const std::vector<T> & stiffness_length_parameters ,
 										   T & effective_spring_constant ,
 										   T & force_magnitude ,
 										   T & energy )
@@ -166,14 +178,14 @@ void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
 	effective_spring_constant = static_cast<T>(0) ;
 	force_magnitude = static_cast<T>(0) ;
 	energy = static_cast<T>(0) ;
-	T force_component ;
+	T delta_length_power_im1 = static_cast<T>(1) ;
 	T delta_length_power_i = delta_length ;
 	for( std::size_t i = 0 ; i < force_length_parameters.size() ; ++i ) {
-		force_component = force_length_parameters[i] * delta_length_power_i ;
-		force_magnitude += force_component ;
-		energy += ( force_component * delta_length ) / ( static_cast<T>(i+2) ) ;
-		effective_spring_constant += force_component / ( delta_length * static_cast<T>(i+1) ) ;
+		effective_spring_constant += stiffness_length_parameters[i] * delta_length_power_im1 ;
+		force_magnitude += force_length_parameters[i] * delta_length_power_i ;
+		delta_length_power_im1 = delta_length_power_i ;
 		delta_length_power_i *= delta_length ;
+		energy += energy_length_parameters[i] * delta_length_power_i ;
 	}
 	return ;
 }
@@ -190,6 +202,8 @@ void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
 template< class T , std::size_t N >
 void Spring<T,N>::spring_force_exponential( const T & delta_length ,
 										    const std::vector<T> & force_length_parameters ,
+										    const std::vector<T> & energy_length_parameters ,
+										    const std::vector<T> & stiffness_length_parameters ,
 											T & effective_spring_constant ,
 										    T & force_magnitude ,
 										    T & energy )
@@ -201,7 +215,7 @@ void Spring<T,N>::spring_force_exponential( const T & delta_length ,
 	for( std::size_t i = 0 ; i < force_length_parameters.size() ; i+=2 ) {
 		force_component = force_length_parameters[i] * std::expm1( delta_length * force_length_parameters[i+1] ) ;
 		force_magnitude += force_component ;
-		energy += (force_component/force_length_parameters[i+1]) - (delta_length*force_length_parameters[i]) ;
+		energy += (force_component*energy_length_parameters[i]) - (delta_length*force_length_parameters[i]) ;
 		effective_spring_constant += force_length_parameters[i+1] * ( force_component + force_length_parameters[i] ) ;
 	}
 	return ;
@@ -219,6 +233,8 @@ void Spring<T,N>::spring_force_exponential( const T & delta_length ,
 template< class T , std::size_t N >
 void Spring<T,N>::spring_force_powerlaw( const T & delta_length ,
 										 const std::vector<T> & force_length_parameters ,
+										 const std::vector<T> & energy_length_parameters ,
+										 const std::vector<T> & stiffness_length_parameters ,
 										 T & effective_spring_constant ,
 										 T & force_magnitude ,
 										 T & energy )
@@ -227,13 +243,12 @@ void Spring<T,N>::spring_force_powerlaw( const T & delta_length ,
 	force_magnitude = static_cast<T>(0) ;
 	energy = static_cast<T>(0) ;
 	T delta_length_power ;
-	T force_component ;
 	for( std::size_t i = 0 ; i < force_length_parameters.size() ; i+=2 ) {
-		delta_length_power = std::pow( delta_length , force_length_parameters[i+1] ) ;
-		force_component = force_length_parameters[i] * delta_length_power ;
-		force_magnitude += force_component ;
-		energy += force_component * delta_length / ( force_length_parameters[i+1] + static_cast<T>(1) ) ;
-		effective_spring_constant += force_component / ( delta_length * force_length_parameters[i+1] ) ;
+		delta_length_power = std::pow( delta_length , force_length_parameters[i+1]-static_cast<T>(1) ) ;
+		effective_spring_constant += stiffness_length_parameters[i] * delta_length_power ;
+		delta_length_power *= delta_length ;
+		force_magnitude += force_length_parameters[i] * delta_length_power ;
+		energy += energy_length_parameters[i] * delta_length_power * delta_length ;
 	}
 	return ;
 }

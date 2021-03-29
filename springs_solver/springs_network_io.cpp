@@ -112,7 +112,6 @@ void SpringNetwork<T,N>::load_network_binary( const char * file_nodes ,
 			NFLPT = static_cast<std::size_t>(read_data_uint32[2]) ;
 			read_data_T = new T [NFLPT] ;
 			std::fread( read_data_T , sizeof(T) , NFLPT , file_ptr ) ;
-			s->num_force_length_parameters_tension     = NFLPT ;
 			s->force_length_parameters_tension = std::vector<T>( &read_data_T[0] , &read_data_T[NFLPT] ) ;
 			delete [] read_data_T ;
 			//
@@ -120,11 +119,10 @@ void SpringNetwork<T,N>::load_network_binary( const char * file_nodes ,
 			NFLPC = static_cast<std::size_t>(read_data_uint32[3]) ;
 			read_data_T = new T [NFLPC] ;
 			std::fread( read_data_T , sizeof(T) , NFLPC , file_ptr ) ;
-			s->num_force_length_parameters_compression = NFLPC ;
 			s->force_length_parameters_compression = std::vector<T>( &read_data_T[0] , &read_data_T[NFLPC] ) ;
 			delete [] read_data_T ;
 			//
-			s->precompute_parameters() ;
+			//s->precompute_parameters() ;
 		}
 		delete [] read_data_uint32 ;
 		delete [] read_data_uint8  ;
@@ -178,8 +176,8 @@ void SpringNetwork<T,N>::save_network_binary( const char * file_nodes ,
 		write_data_uint32 = new std::uint32_t [4] ;
 		write_data_uint8  = new std::uint8_t  [2] ;
 		for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
-			NFLPT = s->num_force_length_parameters_tension ;
-			NFLPC = s->num_force_length_parameters_compression ;
+			NFLPT = s->force_length_parameters_tension.size() ;
+			NFLPC = s->force_length_parameters_compression.size() ;
 			write_data_T = new T [1+NFLPT+NFLPC] ;
 			write_data_uint32[0] = static_cast<std::uint32_t>( s->start - &points[0] ) ;
 			write_data_uint32[1] = static_cast<std::uint32_t>( s->end   - &points[0] ) ;

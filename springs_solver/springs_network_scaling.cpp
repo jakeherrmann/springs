@@ -72,7 +72,7 @@ void SpringNetwork<T,N>::rescale_network( const int & direction )
 			}
 			for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 				s->spring_rescale( scale_length_inv , scale_stiffness_inv ) ;
-				s->precompute_parameters() ;
+				//s->precompute_parameters() ;
 			}
 			break ;
 
@@ -85,7 +85,7 @@ void SpringNetwork<T,N>::rescale_network( const int & direction )
 			}
 			for( iterSpring s = springs.begin() ; s != springs.end() ; ++s ) {
 				s->spring_rescale( scale_length , scale_stiffness ) ;
-				s->precompute_parameters() ;
+				//s->precompute_parameters() ;
 			}
 			break ;
 
