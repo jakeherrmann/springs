@@ -91,6 +91,10 @@ class SpringNetwork:
 		sys_command += ' --verbose 1'
 		sys_command += ' --parallel 1'
 		print(sys_command)
+		os.environ['OMP_STACKSIZE'  ] = '64M'    ;
+		os.environ['OMP_PLACES'     ] = 'cores'  ;
+		os.environ['OMP_WAIT_POLICY'] = 'active' ;
+		os.environ['OMP_PROC_BIND'  ] = 'true'   ;
 		os.system(sys_command)
 
 	def write_spring_network(self, dir_input=None, use_solver_format=False):
