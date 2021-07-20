@@ -35,11 +35,6 @@ void SpringNetwork<T,N>::anneal( void )
 	T obj = get_objective() ;
 	T obj_prev = obj ;
 	T obj_best = obj ;
-
-	//
-	double time_start ;
-	double time_prev ;
-	double time_curr ;
 	
 	// user-definable parameters with default values specific to this algorithm
 	std::size_t local_num_iter_max   = ( num_iter_max   > 0 ) ? num_iter_max   : 5000 ;
@@ -90,9 +85,9 @@ void SpringNetwork<T,N>::anneal( void )
 	// equivalent to 1/e probability to accept objective difference
 	T heatup_amplitude = 0.01 ;
 	std::size_t heatup_num_config = 1000 ;
-	time_start = omp_get_wtime() ;
+	double time_heat = omp_get_wtime() ;
 	obj_compare = heat_up( heatup_amplitude , heatup_num_config ) ;
-	std::cout << "heatup time: " << omp_get_wtime() - time_start << std::endl ;
+	std::cout << "heatup time: " << omp_get_wtime() - time_heat << std::endl ;
 	obj_compare = ( obj_compare > obj_compare_min ) ? obj_compare : obj_compare_min ;
 	T temperature = std::abs( obj_compare - obj_best ) ;
 
@@ -106,25 +101,9 @@ void SpringNetwork<T,N>::anneal( void )
 		<< "  " << std::setw(10) << "sum_F_net"
 		<< "  " << std::setw(10) << "time"
 		<< std::endl ;
-	time_start = omp_get_wtime() ;
-	time_prev  = time_start ;
-
-	// testing
-	update_springs() ;
-	update_forces() ;
-	energy = total_energy() ;
-	get_net_force_mag() ;
-	obj = get_objective() ;
-	std::cout
-		<< std::setprecision(3)
-		<< std::scientific
-		<< "  " << std::setw(10) << obj_best
-		<< "  " << std::setw(10) << obj
-		<< "  " << std::setw(10) << obj_prev
-		<< "  " << std::setw(10) << obj-obj_prev
-		<< "  " << std::setw(10) << step_size
-		<< "  " << std::setw(10) << sum_net_force_magnitude
-		<< std::endl ;
+	double time_start = omp_get_wtime() ;
+	double time_prev = time_start ;
+	double time_curr ;
 
 	// assign subsets of modifiable points shared by partitions
 	setup_shared_data() ;
@@ -197,7 +176,6 @@ void SpringNetwork<T,N>::anneal( void )
 				reboot = std::any_of( &reboot_shared[0] ,
 									  &reboot_shared[0] + num_threads ,
 									  [](const bool & tf){ return tf ; } ) ;
-
 				// evaluate objective function at new configuration
 				obj = get_objective() ;
 				// if configuration is too extreme, reset network to best
@@ -248,7 +226,7 @@ void SpringNetwork<T,N>::anneal( void )
 						++num_consecutive_reject ;
 						++num_since_last_best ;
 					}
-
+					//
 					if( (local_num_iter_print>0) && (iter%local_num_iter_print==0) ) {
 						mean_obj_change /= static_cast<T>(local_num_iter_print) ;
 						time_curr = omp_get_wtime() ;
