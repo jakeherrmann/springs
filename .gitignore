@@ -4,6 +4,8 @@
 *.o
 *.exe
 *.pyc
+*.bkp
+*.dev
 .DS_Store
 test_*
 dev_*

@@ -146,16 +146,6 @@ T Spring<T,N>::spring_energy( void )
 	force *= (force_magnitude/length) ;
 	return energy ;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  ███████  ██████  ██████   ██████ ███████         ██████   ██████  ██      ██    ██ ███    ██  ██████  ███    ███ ██  █████  ██      
-//  ██      ██    ██ ██   ██ ██      ██              ██   ██ ██    ██ ██       ██  ██  ████   ██ ██    ██ ████  ████ ██ ██   ██ ██      
-//  █████   ██    ██ ██████  ██      █████           ██████  ██    ██ ██        ████   ██ ██  ██ ██    ██ ██ ████ ██ ██ ███████ ██      
-//  ██      ██    ██ ██   ██ ██      ██              ██      ██    ██ ██         ██    ██  ██ ██ ██    ██ ██  ██  ██ ██ ██   ██ ██      
-//  ██       ██████  ██   ██  ██████ ███████ ███████ ██       ██████  ███████    ██    ██   ████  ██████  ██      ██ ██ ██   ██ ███████ 
-//
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template< class T , std::size_t N >
 void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
 										   const std::vector<T> & force_length_parameters ,
@@ -168,25 +158,16 @@ void Spring<T,N>::spring_force_polynomial( const T & delta_length ,
 	energy = static_cast<T>(0) ;
 	T force_component ;
 	T delta_length_power_i = delta_length ;
+	T delta_length_inv = static_cast<T>(1.0) / delta_length ;
 	for( std::size_t i = 0 ; i < force_length_parameters.size() ; ++i ) {
 		force_component = force_length_parameters[i] * delta_length_power_i ;
 		force_magnitude += force_component ;
-		energy += ( force_component * delta_length ) / ( static_cast<T>(i+2) ) ;
-		effective_spring_constant += force_component / ( delta_length * static_cast<T>(i+1) ) ;
+		energy += ( force_component * delta_length ) / static_cast<T>(i+2) ;
+		effective_spring_constant += force_component * static_cast<T>(i+1) * delta_length_inv ;
 		delta_length_power_i *= delta_length ;
 	}
 	return ;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  ███████  ██████  ██████   ██████ ███████         ███████ ██   ██ ██████   ██████  ███    ██ ███████ ███    ██ ████████ ██  █████  ██      
-//  ██      ██    ██ ██   ██ ██      ██              ██       ██ ██  ██   ██ ██    ██ ████   ██ ██      ████   ██    ██    ██ ██   ██ ██      
-//  █████   ██    ██ ██████  ██      █████           █████     ███   ██████  ██    ██ ██ ██  ██ █████   ██ ██  ██    ██    ██ ███████ ██      
-//  ██      ██    ██ ██   ██ ██      ██              ██       ██ ██  ██      ██    ██ ██  ██ ██ ██      ██  ██ ██    ██    ██ ██   ██ ██      
-//  ██       ██████  ██   ██  ██████ ███████ ███████ ███████ ██   ██ ██       ██████  ██   ████ ███████ ██   ████    ██    ██ ██   ██ ███████ 
-//
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template< class T , std::size_t N >
 void Spring<T,N>::spring_force_exponential( const T & delta_length ,
 										    const std::vector<T> & force_length_parameters ,
@@ -206,16 +187,6 @@ void Spring<T,N>::spring_force_exponential( const T & delta_length ,
 	}
 	return ;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  ███████  ██████  ██████   ██████ ███████         ██████   ██████  ██     ██ ███████ ██████  ██       █████  ██     ██ 
-//  ██      ██    ██ ██   ██ ██      ██              ██   ██ ██    ██ ██     ██ ██      ██   ██ ██      ██   ██ ██     ██ 
-//  █████   ██    ██ ██████  ██      █████           ██████  ██    ██ ██  █  ██ █████   ██████  ██      ███████ ██  █  ██ 
-//  ██      ██    ██ ██   ██ ██      ██              ██      ██    ██ ██ ███ ██ ██      ██   ██ ██      ██   ██ ██ ███ ██ 
-//  ██       ██████  ██   ██  ██████ ███████ ███████ ██       ██████   ███ ███  ███████ ██   ██ ███████ ██   ██  ███ ███  
-//
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template< class T , std::size_t N >
 void Spring<T,N>::spring_force_powerlaw( const T & delta_length ,
 										 const std::vector<T> & force_length_parameters ,
@@ -228,12 +199,13 @@ void Spring<T,N>::spring_force_powerlaw( const T & delta_length ,
 	energy = static_cast<T>(0) ;
 	T delta_length_power ;
 	T force_component ;
+	T delta_length_inv = static_cast<T>(1.0) / delta_length ;
 	for( std::size_t i = 0 ; i < force_length_parameters.size() ; i+=2 ) {
 		delta_length_power = std::pow( delta_length , force_length_parameters[i+1] ) ;
 		force_component = force_length_parameters[i] * delta_length_power ;
 		force_magnitude += force_component ;
 		energy += force_component * delta_length / ( force_length_parameters[i+1] + static_cast<T>(1) ) ;
-		effective_spring_constant += force_component / ( delta_length * force_length_parameters[i+1] ) ;
+		effective_spring_constant += force_component * force_length_parameters[i+1] * delta_length_inv ;
 	}
 	return ;
 }
@@ -277,31 +249,11 @@ T Spring<T,N>::spring_stiffness_rest( void )
 	}
 	return effective_spring_constant_rest ;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  ███████ ████████ ██ ███████ ███████ ███    ██ ███████ ███████ ███████         ██████  ███████ ███████ ████████         ██████   ██████  ██      ██    ██ ███    ██  ██████  ███    ███ ██  █████  ██      
-//  ██         ██    ██ ██      ██      ████   ██ ██      ██      ██              ██   ██ ██      ██         ██            ██   ██ ██    ██ ██       ██  ██  ████   ██ ██    ██ ████  ████ ██ ██   ██ ██      
-//  ███████    ██    ██ █████   █████   ██ ██  ██ █████   ███████ ███████         ██████  █████   ███████    ██            ██████  ██    ██ ██        ████   ██ ██  ██ ██    ██ ██ ████ ██ ██ ███████ ██      
-//       ██    ██    ██ ██      ██      ██  ██ ██ ██           ██      ██         ██   ██ ██           ██    ██            ██      ██    ██ ██         ██    ██  ██ ██ ██    ██ ██  ██  ██ ██ ██   ██ ██      
-//  ███████    ██    ██ ██      ██      ██   ████ ███████ ███████ ███████ ███████ ██   ██ ███████ ███████    ██    ███████ ██       ██████  ███████    ██    ██   ████  ██████  ██      ██ ██ ██   ██ ███████ 
-//
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template< class T , std::size_t N >
 T Spring<T,N>::spring_stiffness_rest_polynomial( const std::vector<T> & force_length_parameters )
 {
 	return force_length_parameters[0] ;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  ███████ ████████ ██ ███████ ███████ ███    ██ ███████ ███████ ███████         ██████  ███████ ███████ ████████         ███████ ██   ██ ██████   ██████  ███    ██ ███████ ███    ██ ████████ ██  █████  ██      
-//  ██         ██    ██ ██      ██      ████   ██ ██      ██      ██              ██   ██ ██      ██         ██            ██       ██ ██  ██   ██ ██    ██ ████   ██ ██      ████   ██    ██    ██ ██   ██ ██      
-//  ███████    ██    ██ █████   █████   ██ ██  ██ █████   ███████ ███████         ██████  █████   ███████    ██            █████     ███   ██████  ██    ██ ██ ██  ██ █████   ██ ██  ██    ██    ██ ███████ ██      
-//       ██    ██    ██ ██      ██      ██  ██ ██ ██           ██      ██         ██   ██ ██           ██    ██            ██       ██ ██  ██      ██    ██ ██  ██ ██ ██      ██  ██ ██    ██    ██ ██   ██ ██      
-//  ███████    ██    ██ ██      ██      ██   ████ ███████ ███████ ███████ ███████ ██   ██ ███████ ███████    ██    ███████ ███████ ██   ██ ██       ██████  ██   ████ ███████ ██   ████    ██    ██ ██   ██ ███████ 
-//
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template< class T , std::size_t N >
 T Spring<T,N>::spring_stiffness_rest_exponential( const std::vector<T> & force_length_parameters )
 {
@@ -311,18 +263,8 @@ T Spring<T,N>::spring_stiffness_rest_exponential( const std::vector<T> & force_l
 	}
 	return spring_constant_rest ;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  ███████ ████████ ██ ███████ ███████ ███    ██ ███████ ███████ ███████         ██████  ███████ ███████ ████████         ██████   ██████  ██     ██ ███████ ██████  ██       █████  ██     ██ 
-//  ██         ██    ██ ██      ██      ████   ██ ██      ██      ██              ██   ██ ██      ██         ██            ██   ██ ██    ██ ██     ██ ██      ██   ██ ██      ██   ██ ██     ██ 
-//  ███████    ██    ██ █████   █████   ██ ██  ██ █████   ███████ ███████         ██████  █████   ███████    ██            ██████  ██    ██ ██  █  ██ █████   ██████  ██      ███████ ██  █  ██ 
-//       ██    ██    ██ ██      ██      ██  ██ ██ ██           ██      ██         ██   ██ ██           ██    ██            ██      ██    ██ ██ ███ ██ ██      ██   ██ ██      ██   ██ ██ ███ ██ 
-//  ███████    ██    ██ ██      ██      ██   ████ ███████ ███████ ███████ ███████ ██   ██ ███████ ███████    ██    ███████ ██       ██████   ███ ███  ███████ ██   ██ ███████ ██   ██  ███ ███  
-//
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template< class T , std::size_t N >
- T Spring<T,N>::spring_stiffness_rest_powerlaw( const std::vector<T> & force_length_parameters )
+T Spring<T,N>::spring_stiffness_rest_powerlaw( const std::vector<T> & force_length_parameters )
 {
 	T spring_constant_rest = static_cast<T>(0) ;
 	for( std::size_t i = 0 ; i < force_length_parameters.size() ; i+=2 ) {
@@ -334,6 +276,123 @@ template< class T , std::size_t N >
 		}
 	}
 	return spring_constant_rest ;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  ██   ██ ███████ ███████ ███████ ██  █████  ███    ██          ██████  ██████  ███████ ███████ ███████ 
+//  ██   ██ ██      ██      ██      ██ ██   ██ ████   ██         ██      ██    ██ ██      ██      ██      
+//  ███████ █████   ███████ ███████ ██ ███████ ██ ██  ██         ██      ██    ██ █████   █████   ███████ 
+//  ██   ██ ██           ██      ██ ██ ██   ██ ██  ██ ██         ██      ██    ██ ██      ██           ██ 
+//  ██   ██ ███████ ███████ ███████ ██ ██   ██ ██   ████ ███████  ██████  ██████  ███████ ██      ███████
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template< class T , std::size_t N >
+std::pair<T,T> Spring<T,N>::hessian_coefs( void )
+{
+	std::pair<T,T> coefs(0,0) ;
+	T delta_length = length - rest_length ;
+	Spring<T,N>::ForceLengthRelationship * force_length_type = NULL ;
+	std::vector<T> * force_length_parameters = NULL ;
+	if( delta_length == 0.0 ) {
+		coefs.first = static_cast<T>(0) ;
+		coefs.second = spring_stiffness_rest() / (rest_length*rest_length) ;
+	} else {
+		if( delta_length > 0 ) {
+			force_length_type           = & force_length_type_tension ;
+			force_length_parameters     = & force_length_parameters_tension ;
+		} else if( delta_length < 0 ) {
+			delta_length = std::abs( delta_length ) ;
+			force_length_type           = & force_length_type_compression ;
+			force_length_parameters     = & force_length_parameters_compression ;
+		}
+		switch( * force_length_type ) {
+			case Spring<T,N>::ForceLengthRelationship::polynomial :
+				Spring<T,N>::hessian_coefs_polynomial( delta_length ,
+													   length ,
+													   * force_length_parameters ,
+													   coefs.first ,
+													   coefs.second ) ;
+				break ;
+			case Spring<T,N>::ForceLengthRelationship::exponential :
+				Spring<T,N>::hessian_coefs_exponential( delta_length ,
+														length ,
+														* force_length_parameters ,
+														coefs.first ,
+														coefs.second ) ;
+				break ;
+			case Spring<T,N>::ForceLengthRelationship::powerlaw :
+				Spring<T,N>::hessian_coefs_powerlaw( delta_length ,
+													 length ,
+												     * force_length_parameters ,
+													 coefs.first ,
+													 coefs.second ) ;
+				break ;
+			default:
+				coefs.first = static_cast<T>(0) ;
+				coefs.second = static_cast<T>(0) ;
+		}
+	}
+	return coefs ;
+}
+template< class T , std::size_t N >
+void Spring<T,N>::hessian_coefs_polynomial( const T & delta_length ,
+											const T & length ,
+											const std::vector<T> & force_length_parameters ,
+											T & h0 ,
+											T & h1 )
+{
+	h0 = static_cast<T>(0.0) ;
+	h1 = static_cast<T>(0.0) ;
+	T stretch_ratio = delta_length / length ;
+	T delta_length_power_i = static_cast<T>(1.0) ;
+	for( std::size_t i = 0 ; i < force_length_parameters.size() ; ++i ) {
+		h0 += force_length_parameters[i] ;
+		h1 += force_length_parameters[i] * (static_cast<T>(i+1)-stretch_ratio) * delta_length_power_i ;
+		delta_length_power_i *= delta_length ;
+	}
+	h0 *= stretch_ratio ;
+	h1 /= (length*length) ;
+	return ;
+}
+template< class T , std::size_t N >
+void Spring<T,N>::hessian_coefs_exponential( const T & delta_length ,
+											 const T & length ,
+											 const std::vector<T> & force_length_parameters ,
+											 T & h0 ,
+											 T & h1 )
+{
+	h0 = static_cast<T>(0.0) ;
+	h1 = static_cast<T>(0.0) ;
+	T length_inv = static_cast<T>(1.0) / length ;
+	for( std::size_t i = 0 ; i < force_length_parameters.size() ; i+=2 ) {
+		T expm1_val = std::expm1( delta_length * force_length_parameters[i+1] ) ;
+		h0 += force_length_parameters[i] * expm1_val ;
+		h1 += force_length_parameters[i] * ( ((expm1_val+static_cast<T>(1.0))*force_length_parameters[i+1]) - (expm1_val*length_inv) ) ;
+	}
+	h0 *= length_inv ;
+	h1 *= (length_inv*length_inv) ;
+	return ;
+}
+template< class T , std::size_t N >
+void Spring<T,N>::hessian_coefs_powerlaw( const T & delta_length ,
+										  const T & length ,
+										  const std::vector<T> & force_length_parameters ,
+										  T & h0 ,
+										  T & h1 )
+{
+	h0 = static_cast<T>(0.0) ;
+	h1 = static_cast<T>(0.0) ;
+	T stretch_ratio = delta_length / length ;
+	T delta_length_power ;
+	for( std::size_t i = 0 ; i < force_length_parameters.size() ; i+=2 ) {
+		delta_length_power = std::pow( delta_length , force_length_parameters[i+1]-static_cast<T>(1.0) ) ;
+		h0 += force_length_parameters[i] ;
+		h1 += force_length_parameters[i] * (force_length_parameters[i+1]-stretch_ratio) * delta_length_power ;
+	}
+	h0 *= stretch_ratio ;
+	h1 /= (length*length) ;
+	return ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

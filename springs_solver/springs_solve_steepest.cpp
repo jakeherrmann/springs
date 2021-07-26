@@ -96,8 +96,9 @@ void SpringNetwork<T,N>::minimize_energy( void )
 		const int thread_id = omp_get_thread_num() ;
 		std::vector< Point<T,N> > points_local ;
 		std::vector< Spring<T,N> > springs_local ;
+		std::vector< std::vector< Link > > links_local ;
 		std::vector< std::pair< Point<T,N> * , Point<T,N> * > > points_update ;
-		setup_local_data( thread_id , points_local , springs_local , points_update ) ;
+		setup_local_data( thread_id , points_local , springs_local , links_local , points_update ) ;
 		std::vector< Point<T,N> > points_local_prev = points_local ;
 		std::default_random_engine rng_local{ std::random_device{}() } ;
 		std::uniform_real_distribution<T> uni_1_1_local = uni_1_1 ;
@@ -136,7 +137,7 @@ void SpringNetwork<T,N>::minimize_energy( void )
 					get_net_force_mag( points_local , ksum_local , max_net_force_magnitude_local , sum_net_force_magnitude_local ) ;
 					total_energy_local = total_energy( springs_local , thread_springs[thread_id] , ksum_local ) ;
 					obj_local = get_objective( total_energy_local , sum_net_force_magnitude_local , max_net_force_magnitude_local ) ;
-				} while( (obj_local>obj_prev_local) && (step_size_local>step_size_min) ) ;
+				} while( (obj_local>=obj_prev_local) && (step_size_local>step_size_min) ) ;
 				update_points_shared( points_update ) ;
 				update_springs( springs_local ) ;
 				update_forces( points_local , springs_local ) ;

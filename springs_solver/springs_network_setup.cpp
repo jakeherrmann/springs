@@ -377,6 +377,7 @@ template< class T , std::size_t N >
 void SpringNetwork<T,N>::setup_local_data( const int thread_id ,
 										   std::vector<Point<T,N>> & points_local ,
 										   std::vector<Spring<T,N>> & springs_local ,
+										   std::vector< std::vector< Link > > & links_local ,
 										   std::vector< std::pair< Point<T,N> * , Point<T,N> * > > & points_update )
 {
 	// track where local points get stored by original index, NULL if not local
@@ -395,7 +396,9 @@ void SpringNetwork<T,N>::setup_local_data( const int thread_id ,
 	}
 	// subset of modifiable springs local/private to this thread
 	// reset local spring pointers for local points, fixed points, and shared points
+	// also create a vector of local link indexes for each local point, for local hessian calculation
 	springs_local.resize( thread_springs[thread_id].size() ) ;
+	links_local.resize( points_local.size() ) ;
 	for( std::size_t i = 0 ; i < thread_springs[thread_id].size() ; ++i ) {
 		std::size_t s = thread_springs[thread_id][i].first ;
 		springs_local[i] = springs[s] ;
@@ -403,6 +406,14 @@ void SpringNetwork<T,N>::setup_local_data( const int thread_id ,
 		std::size_t i_end   = springs[s].end   - &points[0] ;
 		springs_local[i].start = ( points_private_location[ i_start ] != NULL ) ? points_private_location[ i_start ] : points_shared_location[ i_start ] ; // avoid pointer invalidation!
 		springs_local[i].end   = ( points_private_location[ i_end   ] != NULL ) ? points_private_location[ i_end   ] : points_shared_location[ i_end   ] ; // avoid pointer invalidation!
+		int p_start = ( points_private_location[ i_start ] != NULL ) ? points_private_location[i_start]-&points_local[0] : -1 ;
+		int p_end   = ( points_private_location[ i_end   ] != NULL ) ? points_private_location[i_end  ]-&points_local[0] : -1 ;
+		if( points_private_location[ i_start ] != NULL ) {
+			links_local[p_start].push_back( (Link){ p_end   , points_private_location[i_end  ] , &springs_local[i] , static_cast<T>(+1) } ) ; // avoid pointer invalidation!
+		}
+		if( points_private_location[ i_end   ] != NULL ) {
+			links_local[p_end  ].push_back( (Link){ p_start , points_private_location[i_start] , &springs_local[i] , static_cast<T>(-1) } ) ; // avoid pointer invalidation!
+		}
 	}
 	return ;
 }

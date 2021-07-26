@@ -110,6 +110,10 @@ public:
 	static T spring_stiffness_rest_polynomial ( const std::vector<T> & ) ;
 	static T spring_stiffness_rest_exponential( const std::vector<T> & ) ;
 	static T spring_stiffness_rest_powerlaw   ( const std::vector<T> & ) ;
+	std::pair<T,T> hessian_coefs( void ) ;
+	static void hessian_coefs_polynomial ( const T & , const T & , const std::vector<T> & , T & , T & ) ;
+	static void hessian_coefs_exponential( const T & , const T & , const std::vector<T> & , T & , T & ) ;
+	static void hessian_coefs_powerlaw   ( const T & , const T & , const std::vector<T> & , T & , T & ) ;
 	T spring_get_scale_stiffness( void ) ;
 	void spring_rescale( const T & , const T & ) ;
 	Vector<T,N> get_force( void ) { return force ; } ;
@@ -219,6 +223,8 @@ public:
 	void get_net_force_mag( const std::vector< Point<T,N>   > & , KleinSummer<T> & , T & , T & ) ;
 	void get_net_force_mag( const std::vector< Point<T,N> * > & , KleinSummer<T> & , T & , T & ) ;
 	void move_points_newton( const T & ) ;
+	void move_points_newton( const T & , std::vector< Point<T,N>   > & , const std::vector<T> & ) ;
+	void move_points_newton( const T & , std::vector< Point<T,N> * > & , const std::vector<T> & ) ;
 	void move_points_force( const T & ) ;
 	void move_points_force( const T & , std::vector< Point<T,N>   > & ) ;
 	void move_points_force( const T & , std::vector< Point<T,N> * > & ) ;
@@ -237,9 +243,15 @@ public:
 	void minimize_energy( void ) ;
 	void minimize_energy_newton( void ) ;
 	void compute_gradient( void ) ;
+	void compute_gradient( const std::vector< Point<T,N>   > & , std::vector<T> & ) ;
+	void compute_gradient( const std::vector< Point<T,N> * > & , std::vector<T> & ) ;
 	void compute_hessian_numerical( void ) ;
+	void compute_hessian_numerical( const std::vector< Point<T,N>   > & , const std::vector<std::vector<Link>> & , spmat<T> & ) ;
+	void compute_hessian_numerical( const std::vector< Point<T,N> * > & , const std::vector<std::vector<Link>> & , spmat<T> & ) ;
 	void compute_hessian_analytical( void ) ;
+	void compute_hessian_analytical( std::vector< Point<T,N> > & , std::vector< Spring<T,N> > & , const std::vector<std::vector<Link>> & , spmat<T> & ) ;
 	void compute_newton_step_direction( void ) ;
+	void compute_newton_step_direction( std::vector< Point<T,N> > & , std::vector< Spring<T,N> > & , const std::vector<std::vector<Link>> & , std::vector<T> & ) ;
 	void save_output( void ) ;
 	// input & output
 	void setup( const NetworkParameters & ) ;
@@ -249,7 +261,7 @@ public:
 	void update_points_shared( const std::vector< std::pair< Point<T,N> * , Point<T,N> * > > & ) ;
 	void update_points_all( const std::vector< Point<T,N>   > & ) ;
 	void update_points_all( const std::vector< Point<T,N> * > & ) ;
-	void setup_local_data( const int , std::vector<Point<T,N>> & , std::vector<Spring<T,N>> & , std::vector< std::pair< Point<T,N> * , Point<T,N> * > > & ) ;
+	void setup_local_data( const int , std::vector<Point<T,N>> & , std::vector<Spring<T,N>> & , std::vector<std::vector<Link>> & , std::vector< std::pair< Point<T,N> * , Point<T,N> * > > & ) ;
 	void load_network_binary( const char * , const char * ) ;
 	void save_network_binary( const char * , const char * ) ;
 	void construct_network( void ) ;

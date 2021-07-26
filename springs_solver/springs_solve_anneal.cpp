@@ -117,8 +117,9 @@ void SpringNetwork<T,N>::anneal( void )
 		const int thread_id = omp_get_thread_num() ;
 		std::vector< Point<T,N> > points_local ;
 		std::vector< Spring<T,N> > springs_local ;
+		std::vector< std::vector< Link > > links_local ;
 		std::vector< std::pair< Point<T,N> * , Point<T,N> * > > points_update ;
-		setup_local_data( thread_id , points_local , springs_local , points_update ) ;
+		setup_local_data( thread_id , points_local , springs_local , links_local , points_update ) ;
 		std::vector< Point<T,N> > points_local_init = points_local ;
 		std::vector< Point<T,N> > points_local_prev = points_local ;
 		std::vector< Point<T,N> > points_local_best = points_local ;
