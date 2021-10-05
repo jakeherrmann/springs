@@ -94,8 +94,8 @@ nodes.fixed    = false( [ num_points , num_dimensions ] ) ;
 
 % assign values computed in previous section
 nodes.position = [ col(:) , row(:) ] ;
-nodes.fixed( boundary{2} ,:) = true ; % fix top row vertically
-nodes.fixed( boundary{1} ,:) = true ; % bottom row fixed
+nodes.fixed( boundary{2} ,:) = true ; % fix top row
+nodes.fixed( boundary{1} ,:) = true ; % fix bottom row
 nodes.fixed( boundary{3} ,1) = true ; % fix left column horizontally
 nodes.fixed( boundary{4} ,1) = true ; % fix right column horizontally
 
