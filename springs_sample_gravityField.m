@@ -102,16 +102,20 @@ nodes.fixed( boundary{4} ,1) = true ; % fix right column horizontally
 % these are the only mandatory properties of springs data structure.
 % the springs_solve() command will ignore any other properties.
 % you may add any additional properties as desired.
-springs.nodes                 = zeros( [ num_springs , 2                         ] ) ;
-springs.rest_length           = zeros( [ num_springs , 1                         ] ) ;
-springs.stiffness_tension     = zeros( [ num_springs , num_stiffness_tension     ] ) ;
-springs.stiffness_compression = zeros( [ num_springs , num_stiffness_compression ] ) ;
-springs.compression           = zeros( [ num_springs , 1                         ] ) ;
+springs.nodes                               = zeros( [ num_springs , 2 ] ) ;
+springs.rest_length                         = zeros( [ num_springs , 1 ] ) ;
+springs.force_length_type_tension           = zeros( [ num_springs , 1 ] ) ;
+springs.force_length_type_compression       = zeros( [ num_springs , 1 ] ) ;
+springs.force_length_parameters_tension     =  cell( [ num_springs , 1 ] ) ;
+springs.force_length_parameters_compression =  cell( [ num_springs , 1 ] ) ;
 
 % assign values computed in previous section
 springs.nodes = spring_nodes ;
 springs.rest_length(:) = spring_rest_length ;
-springs.stiffness_tension(:,1) = spring_stiffness ;
+springs.force_length_type_tension(:) = 1 ; % none=0, polynomial=1, exponential=2, powerlaw=3
+springs.force_length_parameters_tension = mat2cell( spring_stiffness , ones([num_springs,1]) , size(spring_stiffness,2) ) ;
+springs.force_length_type_compression(:) = 1 ; % none=0, polynomial=1, exponential=2, powerlaw=3
+springs.force_length_parameters_compression = mat2cell( spring_stiffness , ones([num_springs,1]) , size(spring_stiffness,2) ) ;
 
 %% SOLVE EQUILIBRIUM (NO FORCES)
 
@@ -133,7 +137,7 @@ options.tolerance_sum_net_force = 1e-24 ;
 gravity_angle = -0.35*pi ;
 gravity_direction = [ cos(gravity_angle) , sin(gravity_angle) ] ;
 height = nodes.position * gravity_direction' ;
-gravity_magnitude = 0.2 * ( max(height) - height ) / range(height) ;
+gravity_magnitude = 1.2 * ( max(height) - height ) / range(height) ;
 nodes_eq.force = bsxfun(@times, gravity_magnitude , gravity_direction ) ;
 
 % run solver
@@ -141,8 +145,8 @@ nodes_eq.force = bsxfun(@times, gravity_magnitude , gravity_direction ) ;
 
 %% DISPLAY
 
-h_before = display_2D( nodes_eq       , springs , 'stiffness_tension' , [0,2] , parula(10) , true ) ;
-h_after  = display_2D( nodes_eq_force , springs , 'stiffness_tension' , [0,2] , parula(10) , true ) ;
+h_before = display_2D( nodes_eq       , springs , springs_tension(nodes_eq      ,springs) , [0,2] , parula(10) , false ) ;
+h_after  = display_2D( nodes_eq_force , springs , springs_tension(nodes_eq_force,springs) , [0,2] , parula(10) , false ) ;
 linkaxes( [h_before.ax,h_after.ax] , 'xy' ) ;
 
 %%
