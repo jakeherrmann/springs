@@ -1,4 +1,4 @@
-import springs_interface as spr
+import springs_py_interface as spr
 
 class Alveolus:
 	def __init__(self):

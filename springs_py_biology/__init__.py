@@ -7,4 +7,4 @@ from .agent_fibroblast import Agent_Fibroblast
 from .stretch_profiles import stretch_ramp
 from .stretch_profiles import stretch_triangle
 
-from .springs_biology_graphics import display
+from .springs_py_biology_graphics import display

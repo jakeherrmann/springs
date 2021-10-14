@@ -2,7 +2,7 @@ from .agent_fibroblast import Agent_Fibroblast
 from .wall import Wall
 from .alveolus import Alveolus
 
-import springs_interface as spr
+import springs_py_interface as spr
 import numpy as np
 import scipy.spatial
 

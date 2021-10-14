@@ -1,6 +1,6 @@
 from .agent import Agent
 
-import springs_interface as spr
+import springs_py_interface as spr
 import math
 
 class Agent_Fibroblast(Agent):

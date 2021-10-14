@@ -3,8 +3,8 @@ import random
 import math
 import statistics
 from pathlib import Path
-import springs_interface as spr 
-import springs_biology as bio
+import springs_py_interface as spr 
+import springs_py_biology as bio
 
 def main(argv):
 	
