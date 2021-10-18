@@ -148,6 +148,13 @@ void SpringNetwork<T,N>::minimize_energy( void )
 			total_energy_shared           [ thread_id ] = total_energy_local            ;
 			max_net_force_magnitude_shared[ thread_id ] = max_net_force_magnitude_local ;
 			sum_net_force_magnitude_shared[ thread_id ] = sum_net_force_magnitude_local ;
+			if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
+				// synchronize best point positions to shared data
+				#pragma omp critical
+				{
+					update_points_all( points_local ) ;
+				}
+			}
 			#pragma omp barrier
 			#pragma omp single
 			{
@@ -185,7 +192,6 @@ void SpringNetwork<T,N>::minimize_energy( void )
 					mean_obj_change = static_cast<T>(0.0) ;
 				}
 				// MUST SYNCHRONIZE ALL POINT POSITIONS BEFORE SAVING!
-				/*
 				if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
 					std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
 					make_dir( dir_output_iter_curr ) ;
@@ -193,7 +199,6 @@ void SpringNetwork<T,N>::minimize_energy( void )
 						(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
 						(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
 				}
-				//*/
 				//
 				change_obj = (obj_prev-obj) / (obj_init-obj_prev) ;
 				if( obj == obj_prev ) {

@@ -19,9 +19,13 @@ dir_output = 'springs_output' ;
 
 if ~exist( dir_input ,'dir')
 	mkdir( dir_input )
+else
+	delete(fullfile(dir_input,'*'))
 end
 if ~exist( dir_output ,'dir')
 	mkdir( dir_output )
+else
+	delete(fullfile(dir_output,'*')) ;
 end
 
 springs_write( dir_input , nodes , springs , options ) ;

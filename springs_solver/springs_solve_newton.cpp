@@ -104,7 +104,7 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 		T total_energy_local ;
 		T max_net_force_magnitude_local ;
 		T sum_net_force_magnitude_local ;
-		T step_size_local ;
+		T step_size_local = step_size_max ;
 		// begin newton method descent
 		while( !break_any ) {
 			#pragma omp barrier
@@ -119,7 +119,7 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 				compute_newton_step_direction( points_local , springs_local , links_local , step_direction_local ) ;
 				do {
 					step_size_local *= step_size_reduction ;
-					step_size = ( step_size > step_size_max ) ? step_size_max : step_size ;
+					step_size_local = ( step_size_local > step_size_max ) ? step_size_max : step_size_local ;
 					points_local = points_local_prev ;
 					move_points_newton( step_size_local , points_local , step_direction_local ) ;
 					update_springs( springs_local ) ;
@@ -138,6 +138,13 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 			total_energy_shared           [ thread_id ] = total_energy_local            ;
 			max_net_force_magnitude_shared[ thread_id ] = max_net_force_magnitude_local ;
 			sum_net_force_magnitude_shared[ thread_id ] = sum_net_force_magnitude_local ;
+			if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
+				// synchronize best point positions to shared data
+				#pragma omp critical
+				{
+					update_points_all( points_local ) ;
+				}
+			}
 			#pragma omp barrier
 			#pragma omp single
 			{
@@ -175,7 +182,6 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 					mean_obj_change = static_cast<T>(0.0) ;
 				}
 				// MUST SYNCHRONIZE ALL POINT POSITIONS BEFORE SAVING!
-				/*
 				if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
 					std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
 					make_dir( dir_output_iter_curr ) ;
@@ -183,7 +189,6 @@ void SpringNetwork<T,N>::minimize_energy_newton( void )
 						(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
 						(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
 				}
-				//*/
 				//
 				change_obj = (obj_prev-obj) / (obj_init-obj_prev) ;
 				if( obj == obj_prev ) {
@@ -467,7 +472,7 @@ void SpringNetwork<T,N>::compute_hessian_numerical( void )
 	return ;
 }
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::compute_hessian_numerical( std::vector< Point<T,N> > & points_subset , const std::vector<std::vector<Link>> & links_subset , spmat<T> & hessian_subset )
+void SpringNetwork<T,N>::compute_hessian_numerical( std::vector< Point<T,N> > & points_subset , std::vector<std::vector<Link>> & links_subset , spmat<T> & hessian_subset )
 {
 	// evaluate spatial derivatives in nodal forces
 	// using central difference, small step +/- in each direction
@@ -554,7 +559,7 @@ void SpringNetwork<T,N>::compute_hessian_numerical( std::vector< Point<T,N> > & 
 	return ;
 }
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::compute_hessian_numerical( const std::vector< Point<T,N> * > & points_subset , const std::vector<std::vector<Link>> & links_subset , spmat<T> & hessian_subset )
+void SpringNetwork<T,N>::compute_hessian_numerical( std::vector< Point<T,N> * > & points_subset , std::vector<std::vector<Link>> & links_subset , spmat<T> & hessian_subset )
 {
 	// evaluate spatial derivatives in nodal forces
 	// using central difference, small step +/- in each direction
@@ -705,7 +710,7 @@ void SpringNetwork<T,N>::compute_hessian_analytical( void )
 	return ;
 }
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::compute_hessian_analytical( std::vector< Point<T,N> > & points_subset , std::vector< Spring<T,N> > & springs_subset , const std::vector<std::vector<Link>> & links_subset , spmat<T> & hessian_subset )
+void SpringNetwork<T,N>::compute_hessian_analytical( std::vector< Point<T,N> > & points_subset , std::vector< Spring<T,N> > & springs_subset , std::vector<std::vector<Link>> & links_subset , spmat<T> & hessian_subset )
 {
 	//
 	iterLink l ;
@@ -716,38 +721,42 @@ void SpringNetwork<T,N>::compute_hessian_analytical( std::vector< Point<T,N> > &
 	std::vector<std::size_t> sp_col ;
 	std::vector<T> sp_val ;
 	//
-	std::vector<std::pair<T,T>> hessian_coef ;
-	hessian_coef.resize( num_spring ) ;
+	std::vector<std::pair<T,T>> hessian_coefs ;
+	hessian_coefs.resize( num_spring ) ;
 	for( std::size_t s = 0 ; s < springs_subset.size() ; ++s ) {
-		hessian_coef[s] = springs_subset[s].hessian_coefs() ;
+		hessian_coefs[s] = springs_subset[s].hessian_coefs() ;
 	}
 	//
 	for( std::size_t p = 0 ; p < points_subset.size() ; ++p ) {
 		for( l = links_subset[p].begin() , l_end = links_subset[p].end() ; l != l_end ; ++l ) {
 			std::size_t s = l->spring - &springs_subset[0] ;
-			for( std::size_t d_p = 0 ; d_p < N ; ++d_p ) {
-				T delta_p = points_subset[p].position[d_p] - l->point->position[d_p] ;
-				sp_row.push_back( p*N + d_p ) ;
-				sp_col.push_back( (l->node_index)*N + d_p ) ;
-				sp_val.push_back( -( hessian_coefs[s].first + (delta_p*delta_p*hessian_coefs[s].second) ) ) ;
-				for( std::size_t d_o = 0 ; d_o < (N-1) ; ++d_o ) {
-					std::size_t d_f = ( d_p + d_o ) % N ;
-					T delta_f = points_subset[p].position[d_f] - l->point->position[d_f] ;
-					T val = -( delta_p * delta_f * hessian_coefs[s].second )  ;
+			// maybe need to create dummy placeholders for shared points?
+			// calculate the 2nd derivative and hessian-projected displacement, but just don't move them?
+			if( l->node_index >= 0 ) { // this needs to be handled differently
+				for( std::size_t d_p = 0 ; d_p < N ; ++d_p ) {
+					T delta_p = points_subset[p].position[d_p] - l->point->position[d_p] ;
 					sp_row.push_back( p*N + d_p ) ;
-					sp_col.push_back( (l->node_index)*N + d_f) ;
-					sp_val.push_back( val ) ;
-					sp_row.push_back( (l->node_index)*N + d_f) ;
-					sp_col.push_back( p*N + d_p ) ;
-					sp_val.push_back( val ) ;
+					sp_col.push_back( (l->node_index)*N + d_p ) ;
+					sp_val.push_back( -( hessian_coefs[s].first + (delta_p*delta_p*hessian_coefs[s].second) ) ) ;
+					for( std::size_t d_o = 0 ; d_o < (N-1) ; ++d_o ) {
+						std::size_t d_f = ( d_p + d_o ) % N ;
+						T delta_f = points_subset[p].position[d_f] - l->point->position[d_f] ;
+						T val = -( delta_p * delta_f * hessian_coefs[s].second )  ;
+						sp_row.push_back( p*N + d_p ) ;
+						sp_col.push_back( (l->node_index)*N + d_f) ;
+						sp_val.push_back( val ) ;
+						sp_row.push_back( (l->node_index)*N + d_f) ;
+						sp_col.push_back( p*N + d_p ) ;
+						sp_val.push_back( val ) ;
+					}
 				}
 			}
 		}
 		for( std::size_t d_p = 0 ; d_p < N ; ++d_p ) {
+			T delta_p = points_subset[p].position[d_p] - l->point->position[d_p] ;
 			T val = static_cast<T>(0) ;
 			for( l = links_subset[p].begin() , l_end = links_subset[p].end() ; l != l_end ; ++l ) {
 				std::size_t s = l->spring - &springs_subset[0] ;
-				T delta_p = points_subset[p].position[d_p] - l->point->position[d_p] ;
 				val += hessian_coefs[s].first - (delta_p*delta_p*hessian_coefs[s].second) ;
 			}
 			sp_row.push_back( p*N + d_p ) ;
@@ -759,6 +768,76 @@ void SpringNetwork<T,N>::compute_hessian_analytical( std::vector< Point<T,N> > &
 				for( l = links_subset[p].begin() , l_end = links_subset[p].end() ; l != l_end ; ++l ) {
 					std::size_t s = l->spring - &springs_subset[0] ;
 					T delta_f = points_subset[p].position[d_f] - l->point->position[d_f] ;
+					val += (delta_p*delta_f*hessian_coefs[s].second) ;
+				}
+				sp_row.push_back( p*N + d_p ) ;
+				sp_col.push_back( p*N + d_f ) ;
+				sp_val.push_back( val ) ;
+				sp_row.push_back( p*N + d_f ) ;
+				sp_col.push_back( p*N + d_p ) ;
+				sp_val.push_back( val ) ;
+			}
+		}
+	}
+	hessian_subset = typename spmat<T>::spmat( N*num_node , N*num_node ) ;
+	hessian_subset.set_val( sp_row , sp_col , sp_val ) ;
+	return ;
+}
+template< class T , std::size_t N >
+void SpringNetwork<T,N>::compute_hessian_analytical( std::vector< Point<T,N> * > & points_subset , std::vector< Spring<T,N> > & springs_subset , std::vector<std::vector<Link>> & links_subset , spmat<T> & hessian_subset )
+{
+	//
+	iterLink l ;
+	iterLink l_end ;
+	std::size_t num_node = points_subset.size() ; // safe because fixed points are not assigned to subset partitions
+	std::size_t num_spring = springs_subset.size() ;
+	std::vector<std::size_t> sp_row ;
+	std::vector<std::size_t> sp_col ;
+	std::vector<T> sp_val ;
+	//
+	std::vector<std::pair<T,T>> hessian_coefs ;
+	hessian_coefs.resize( num_spring ) ;
+	for( std::size_t s = 0 ; s < springs_subset.size() ; ++s ) {
+		hessian_coefs[s] = springs_subset[s].hessian_coefs() ;
+	}
+	//
+	for( std::size_t p = 0 ; p < points_subset.size() ; ++p ) {
+		for( l = links_subset[p].begin() , l_end = links_subset[p].end() ; l != l_end ; ++l ) {
+			std::size_t s = l->spring - &springs_subset[0] ;
+			for( std::size_t d_p = 0 ; d_p < N ; ++d_p ) {
+				T delta_p = points_subset[p]->position[d_p] - l->point->position[d_p] ;
+				sp_row.push_back( p*N + d_p ) ;
+				sp_col.push_back( (l->node_index)*N + d_p ) ;
+				sp_val.push_back( -( hessian_coefs[s].first + (delta_p*delta_p*hessian_coefs[s].second) ) ) ;
+				for( std::size_t d_o = 0 ; d_o < (N-1) ; ++d_o ) {
+					std::size_t d_f = ( d_p + d_o ) % N ;
+					T delta_f = points_subset[p]->position[d_f] - l->point->position[d_f] ;
+					T val = -( delta_p * delta_f * hessian_coefs[s].second )  ;
+					sp_row.push_back( p*N + d_p ) ;
+					sp_col.push_back( (l->node_index)*N + d_f) ;
+					sp_val.push_back( val ) ;
+					sp_row.push_back( (l->node_index)*N + d_f) ;
+					sp_col.push_back( p*N + d_p ) ;
+					sp_val.push_back( val ) ;
+				}
+			}
+		}
+		for( std::size_t d_p = 0 ; d_p < N ; ++d_p ) {
+			T delta_p = points_subset[p]->position[d_p] - l->point->position[d_p] ;
+			T val = static_cast<T>(0) ;
+			for( l = links_subset[p].begin() , l_end = links_subset[p].end() ; l != l_end ; ++l ) {
+				std::size_t s = l->spring - &springs_subset[0] ;
+				val += hessian_coefs[s].first - (delta_p*delta_p*hessian_coefs[s].second) ;
+			}
+			sp_row.push_back( p*N + d_p ) ;
+			sp_col.push_back( p*N + d_p ) ;
+			sp_val.push_back( val ) ;
+			val = static_cast<T>(0) ;
+			for( std::size_t d_o = 0 ; d_o < (N-1) ; ++d_o ) {
+				std::size_t d_f = ( d_p + d_o ) % N ;
+				for( l = links_subset[p].begin() , l_end = links_subset[p].end() ; l != l_end ; ++l ) {
+					std::size_t s = l->spring - &springs_subset[0] ;
+					T delta_f = points_subset[p]->position[d_f] - l->point->position[d_f] ;
 					val += (delta_p*delta_f*hessian_coefs[s].second) ;
 				}
 				sp_row.push_back( p*N + d_p ) ;
@@ -852,7 +931,7 @@ void SpringNetwork<T,N>::compute_newton_step_direction( void )
 	return ;
 }
 template< class T , std::size_t N >
-void SpringNetwork<T,N>::compute_newton_step_direction( std::vector< Point<T,N> > & points_subset , std::vector< Spring<T,N> > & springs_subset , const std::vector<std::vector<Link>> & links_subset , std::vector<T> & step_direction )
+void SpringNetwork<T,N>::compute_newton_step_direction( std::vector< Point<T,N> > & points_subset , std::vector< Spring<T,N> > & springs_subset , std::vector<std::vector<Link>> & links_subset , std::vector<T> & step_direction )
 {
 	// prepare gradient
 	std::vector<T> neg_gradient ;

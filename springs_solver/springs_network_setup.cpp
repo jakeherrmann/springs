@@ -409,10 +409,18 @@ void SpringNetwork<T,N>::setup_local_data( const int thread_id ,
 		int p_start = ( points_private_location[ i_start ] != NULL ) ? points_private_location[i_start]-&points_local[0] : -1 ;
 		int p_end   = ( points_private_location[ i_end   ] != NULL ) ? points_private_location[i_end  ]-&points_local[0] : -1 ;
 		if( points_private_location[ i_start ] != NULL ) {
-			links_local[p_start].push_back( (Link){ p_end   , points_private_location[i_end  ] , &springs_local[i] , static_cast<T>(+1) } ) ; // avoid pointer invalidation!
+			if( points_private_location[ i_end   ] != NULL ) {
+				links_local[p_start].push_back( (Link){ p_end   , points_private_location[i_end  ] , &springs_local[i] , static_cast<T>(+1) } ) ; // avoid pointer invalidation!
+			} else {
+				links_local[p_start].push_back( (Link){ p_end   ,  points_shared_location[i_end  ] , &springs_local[i] , static_cast<T>(+1) } ) ; // avoid pointer invalidation!
+			}
 		}
 		if( points_private_location[ i_end   ] != NULL ) {
-			links_local[p_end  ].push_back( (Link){ p_start , points_private_location[i_start] , &springs_local[i] , static_cast<T>(-1) } ) ; // avoid pointer invalidation!
+			if( points_private_location[ i_start ] != NULL ) {
+				links_local[p_end  ].push_back( (Link){ p_start , points_private_location[i_start] , &springs_local[i] , static_cast<T>(-1) } ) ; // avoid pointer invalidation!
+			} else {
+				links_local[p_end  ].push_back( (Link){ p_start ,  points_shared_location[i_start] , &springs_local[i] , static_cast<T>(-1) } ) ; // avoid pointer invalidation!
+			}
 		}
 	}
 	return ;

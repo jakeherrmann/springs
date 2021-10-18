@@ -127,12 +127,13 @@ springs.force_length_parameters_compression = mat2cell( spring_stiffness , ones(
 
 % solver parameters not specified are treated as default.
 options = springs_default_options() ;
-options.algorithm = 'anneal' ;
+options.algorithm = 'steepest' ;
 options.objective = 'maxforce' ;
 options.include_force_fixed_nodes = false ;
 options.num_iter_print = 10000 ;
 options.tolerance_change_objective = 1e-12 ;
 options.tolerance_sum_net_force = 1e-24 ;
+options.use_numerical_hessian = true ;
 
 % run solver
 [ nodes_eq , ~ ] = springs_solve( nodes , springs , options ) ;

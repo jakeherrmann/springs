@@ -161,6 +161,17 @@ void SpringNetwork<T,N>::anneal( void )
 			max_net_force_magnitude_shared[ thread_id ] = max_net_force_magnitude_local ;
 			sum_net_force_magnitude_shared[ thread_id ] = sum_net_force_magnitude_local ;
 			reboot_shared                 [ thread_id ] = test_reboot( springs_local ) ;
+			if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
+				// synchronize best point positions to shared data
+				#pragma omp critical
+				{
+					if( improved_best ) {
+						update_points_all( points_local ) ;
+					} else {
+						update_points_all( points_local_best ) ;
+					}
+				}
+			}
 			#pragma omp barrier
 			#pragma omp single
 			{
@@ -247,7 +258,6 @@ void SpringNetwork<T,N>::anneal( void )
 					}
 
 					// MUST SYNCHRONIZE ALL POINT POSITIONS BEFORE SAVING!
-					/*
 					if( (local_num_iter_save>0) && (iter%local_num_iter_save==0) ) {
 						std::string dir_output_iter_curr = dir_output_iter + "iter_" + std::to_string(iter) + FILESEP ;
 						make_dir( dir_output_iter_curr ) ;
@@ -255,7 +265,6 @@ void SpringNetwork<T,N>::anneal( void )
 							(dir_output_iter_curr+"network_nodes.dat").c_str()   ,
 							(dir_output_iter_curr+"network_springs.dat").c_str() ) ;
 					}
-					//*/
 
 					// if obj changes are small for multiple iterations, then
 					// assume the current state is near local minimum, and
@@ -332,8 +341,7 @@ void SpringNetwork<T,N>::anneal( void )
 		<< "  " << std::setw(10) << step_size
 		<< "  " << std::setw(10) << sum_net_force_magnitude
 		<< std::endl ;
-
-	std::cout << obj - obj_best << std::endl ;
+	//std::cout << obj - obj_best << std::endl ;
 
 	// final update in best configuration
 	update_springs() ;

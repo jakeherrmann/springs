@@ -246,12 +246,13 @@ public:
 	void compute_gradient( const std::vector< Point<T,N>   > & , std::vector<T> & ) ;
 	void compute_gradient( const std::vector< Point<T,N> * > & , std::vector<T> & ) ;
 	void compute_hessian_numerical( void ) ;
-	void compute_hessian_numerical( const std::vector< Point<T,N>   > & , const std::vector<std::vector<Link>> & , spmat<T> & ) ;
-	void compute_hessian_numerical( const std::vector< Point<T,N> * > & , const std::vector<std::vector<Link>> & , spmat<T> & ) ;
+	void compute_hessian_numerical( std::vector< Point<T,N>   > & , std::vector<std::vector<Link>> & , spmat<T> & ) ;
+	void compute_hessian_numerical( std::vector< Point<T,N> * > & , std::vector<std::vector<Link>> & , spmat<T> & ) ;
 	void compute_hessian_analytical( void ) ;
-	void compute_hessian_analytical( std::vector< Point<T,N> > & , std::vector< Spring<T,N> > & , const std::vector<std::vector<Link>> & , spmat<T> & ) ;
+	void compute_hessian_analytical( std::vector< Point<T,N>   > & , std::vector< Spring<T,N> > & , std::vector<std::vector<Link>> & , spmat<T> & ) ;
+	void compute_hessian_analytical( std::vector< Point<T,N> * > & , std::vector< Spring<T,N> > & , std::vector<std::vector<Link>> & , spmat<T> & ) ;
 	void compute_newton_step_direction( void ) ;
-	void compute_newton_step_direction( std::vector< Point<T,N> > & , std::vector< Spring<T,N> > & , const std::vector<std::vector<Link>> & , std::vector<T> & ) ;
+	void compute_newton_step_direction( std::vector< Point<T,N> > & , std::vector< Spring<T,N> > & , std::vector<std::vector<Link>> & , std::vector<T> & ) ;
 	void save_output( void ) ;
 	// input & output
 	void setup( const NetworkParameters & ) ;
