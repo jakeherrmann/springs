@@ -47,6 +47,8 @@ class SpringNetwork:
 		self.solver_use_numerical_hessian = False
 		self.solver_tolerance_change_objective = 1.0e-12
 		self.solver_tolerance_sum_net_force = 1.0e-12
+		self.solver_verbose = 1
+		self.solver_parallel = 1
 		#
 
 	def setup(self, nodes=None, springs=None, structures=None, structure_groups=None, boundaries=None):
@@ -88,8 +90,8 @@ class SpringNetwork:
 			print('Attempting to compile now.')
 			springs_setup.main('')
 		sys_command = str(exe_springs_solver) + ' ' + str(dir_input) + ' ' + str(dir_output)
-		sys_command += ' --verbose 1'
-		sys_command += ' --parallel 1'
+		sys_command += ' --verbose ' + str(self.solver_verbose)
+		sys_command += ' --parallel ' + str(self.solver_parallel)
 		print(sys_command)
 		os.environ['OMP_STACKSIZE'  ] = '64M'    ;
 		os.environ['OMP_PLACES'     ] = 'cores'  ;

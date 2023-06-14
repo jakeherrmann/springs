@@ -59,10 +59,12 @@ def main(argv):
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 	net.solver_algorithm = 'steepest'
-	net.solver_objective = 'maxforce'
+	net.solver_objective = 'sumforce'
 	net.solver_tolerance_change_objective = 1.0E-16
 	net.solver_tolerance_sum_net_force = 1.0E-16
-	net.solver_num_threads = 6 ;
+	net.solver_num_threads = 6
+	net.solver_verbose = 1
+	net.solver_parallel = 0
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 	using_stretch_profile = False
@@ -178,6 +180,15 @@ def main(argv):
 					save_file_name=Path('.')/'..'/'breath_{:02d}.png'.format(iter_cycle+1),
 					dpi=300,
 					show=False)
+		bio.display(lung,
+			color_variable='effective_spring_constant',
+			color_range=(-0.05,5.0),
+			show_agents=False,
+			ax_lims=ax_lims,
+			delay=None,
+			save_file_name=Path('.')/'..'/'final.png'.format(iter_cycle+1),
+			dpi=300,
+			show=False)
 		return
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
