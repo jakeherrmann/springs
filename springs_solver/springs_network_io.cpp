@@ -76,11 +76,13 @@ void SpringNetwork<T,N>::load_network_binary( const char * file_nodes ,
 			std::fread( read_data_T     , sizeof(T)            , N+N , file_ptr ) ;
 			std::fread( read_data_uint8 , sizeof(std::uint8_t) , N   , file_ptr ) ;
 			p->fixed_all_dim = true ;
+			p->fixed_any_dim = false ;
 			for( std::size_t n = 0 ; n < N ; ++n ) {
 				p->position[n]      = read_data_T[n  ] ;
 				p->force_applied[n] = read_data_T[n+N] ;
 				p->fixed_dim[n] = ( read_data_uint8[n] != 0 ) ;
 				p->fixed_all_dim = p->fixed_all_dim && p->fixed_dim[n] ;
+				p->fixed_any_dim = p->fixed_any_dim || p->fixed_dim[n] ;
 			}
 		}
 		delete [] read_data_T     ;

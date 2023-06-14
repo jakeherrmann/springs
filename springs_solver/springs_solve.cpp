@@ -336,7 +336,7 @@ void SpringNetwork<T,N>::get_net_force_mag( void )
 	} else {
 		//*
 		for( iterPoint p = points.begin() ; p != points.end() ; ++p ) {
-			if( !p->not_referenced && !p->fixed_all_dim ) {
+			if( !p->not_referenced && !p->fixed_any_dim ) {
 				max_net_force_magnitude = ( p->net_force_magnitude > max_net_force_magnitude ) ? p->net_force_magnitude : max_net_force_magnitude ;
 				ksum.add( p->net_force_magnitude ) ;
 			}

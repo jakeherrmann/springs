@@ -69,6 +69,7 @@ public:
 	T net_force_magnitude = static_cast<T>(0) ;
 	Vector<bool,N> fixed_dim ;
 	bool fixed_all_dim ;
+	bool fixed_any_dim ;
 	bool not_referenced ;
 public:
 	void move( const Vector<T,N> & ) ;

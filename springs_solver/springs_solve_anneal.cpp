@@ -49,7 +49,7 @@ void SpringNetwork<T,N>::anneal( void )
 
 	// annealing solver parameters
 	// TODO // get these parameters from NetworkParameters? (default/file)
-	T step_size = static_cast<T>(0.2) ;
+	T step_size = static_cast<T>(0.000002) ;
 	T step_size_reduction = 0.9 ;
 	T temperature_reduction = static_cast<T>(0.99) ;
 	T obj_compare ;
@@ -198,6 +198,7 @@ void SpringNetwork<T,N>::anneal( void )
 				improved_prev = false ;
 				if( reboot ) {
 					std::cout << "REBOOT" << std::endl ;
+					step_size = static_cast<T>(0.0000002) ;
 					reset_to_best = true ;
 					obj_prev = obj_best ;
 					reboot = false ;

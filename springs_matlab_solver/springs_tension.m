@@ -4,8 +4,7 @@ function force = springs_tension( nodes , springs )
 
 num_springs = size(springs.nodes,1) ;
 
-delta_position = nodes.position( springs.nodes(:,2) ,:) - nodes.position( springs.nodes(:,1) ,:) ;
-length = sqrt(sum(power( delta_position ,2),2)) ;
+length = springs_length( nodes , springs ) ;
 delta_length = length - springs.rest_length ;
 force = zeros( [num_springs,1] ) ;
 for ss = 1 : num_springs
@@ -16,13 +15,13 @@ for ss = 1 : num_springs
 		% spring in tension
 		DL = delta_length(ss) ;
 		force_length_type = springs.force_length_type_tension(ss) ;
-		force_length_parameters = springs.force_length_parameters_tension{ss} ;
+		force_length_parameters = springs.force_length_parameters_tension{ss}(:)' ;
 		force_sign = +1 ;
 	elseif delta_length(ss) < 0.0
 		% spring in compression
 		DL = abs(delta_length(ss)) ;
 		force_length_type = springs.force_length_type_compression(ss) ;
-		force_length_parameters = springs.force_length_parameters_compression{ss} ;
+		force_length_parameters = springs.force_length_parameters_compression{ss}(:)' ;
 		force_sign = -1 ;
 	end
 	switch force_length_type

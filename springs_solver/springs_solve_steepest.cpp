@@ -42,8 +42,8 @@ void SpringNetwork<T,N>::minimize_energy( void )
 	//
 	std::size_t num_iter_zero_change = 0 ;
 	std::size_t num_iter_zero_change_max = 100 ;
-	T step_size_reduction = 0.9 ; // in range (0,1)
-	T step_size_min = 1E-20 ;
+	T step_size_reduction = 0.7 ; // in range (0,1)
+	T step_size_min = 1E-09 ;
 	T change_obj ;
 	T mean_obj_change = static_cast<T>(0.0) ;
 	T step_size_shared_max ;
@@ -126,7 +126,7 @@ void SpringNetwork<T,N>::minimize_energy( void )
 			for( std::size_t iter_parallel = 0 ; iter_parallel < iter_parallel_max ; ++iter_parallel ) {
 				// basic line search
 				T obj_prev_local = obj_local ;
-				step_size_local = 1E-3 / (step_size_reduction*step_size_reduction) ;
+				step_size_local = 1E-1 / step_size_reduction ;
 				points_local_prev = points_local ;
 				do {
 					step_size_local *= step_size_reduction ;
