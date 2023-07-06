@@ -17,7 +17,7 @@ def display(lung, show_slice=False, **kwargs):
 		else:
 			display_3D(lung, **kwargs)
 
-def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show_agents=True, show=True, dpi=300):
+def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=float('inf'), save_file_name=None, show_agents=True, show=True, dpi=300):
 	spring_network = lung.net
 	cmap = plt.get_cmap('inferno')
 	if color_variable is None:
@@ -83,11 +83,12 @@ def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 	else:
 		if delay == float('inf'):
 			plt.show()
-		elif delay is not None:
+		else:
 			plt.draw()
-			plt.pause(delay)
+			if delay is not None:
+				plt.pause(delay)
 
-def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=None, show=True, structures=None, dpi=300):
+def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, delay=float('inf'), save_file_name=None, show=True, structures=None, dpi=300):
 	spring_network = lung.net
 	plane_point  = np.array([2.0, 2.0, 5.0])
 	plane_normal = np.array([0.0, 0.0, 1.0])
@@ -164,11 +165,12 @@ def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, 
 	else:
 		if delay == float('inf'):
 			plt.show()
-		elif delay is not None:
+		else:
 			plt.draw()
-			plt.pause(delay)
+			if delay is not None:
+				plt.pause(delay)
 
-def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=None, save_file_name=False, show_agents=True, show=True, structures=None, dpi=300):
+def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=float('inf'), save_file_name=False, show_agents=True, show=True, structures=None, dpi=300):
 	spring_network = lung.net
 	xyz_segments = [
 		np.stack([
@@ -285,7 +287,8 @@ def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 	else:
 		if delay == float('inf'):
 			plt.show()
-		elif delay is not None:
+		else:
 			plt.draw()
-			plt.pause(delay)
+			if delay is not None:
+				plt.pause(delay)
 
