@@ -98,7 +98,8 @@ void SpringNetwork<T,N>::construct_network( void )
 		                      && points[p_end  ].fixed_all_dim ;
 		bool none_force_length = springs[s].force_length_type_tension    ==Spring<T,N>::ForceLengthRelationship::none
 		                      && springs[s].force_length_type_compression==Spring<T,N>::ForceLengthRelationship::none ;
-		if( !both_points_fixed && !none_force_length ) {
+		bool both_points_same  = springs[s].start == springs[s].end ; 
+		if( !both_points_fixed && !none_force_length && !both_points_same ) {
 			nodes[p_start].links.push_back( (Link){ -1 , &points[p_end  ] , &springs[s] , static_cast<T>(+1) } ) ;
 			nodes[p_end  ].links.push_back( (Link){ -1 , &points[p_start] , &springs[s] , static_cast<T>(-1) } ) ;
 			points[p_start].not_referenced = false ;

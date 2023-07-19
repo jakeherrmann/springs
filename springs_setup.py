@@ -7,7 +7,7 @@ def main(argv):
 	dir_solver_obj = dir_solver / 'obj'
 	os.system( 'mkdir ' + str(dir_solver_obj) )
 	os.system( 'make -C ' + str(dir_solver) + ' clean' )
-	os.system( 'make -C ' + str(dir_solver) )
+	os.system( 'make -j -C ' + str(dir_solver) )
 
 if __name__ == '__main__':
 	main(sys.argv[1:])

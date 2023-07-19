@@ -18,6 +18,8 @@ The Python and Matlab commands to setup the solver executable (springs_setup.py 
 	- METIS: Easiest installation involves 2 commands through terminal, using a macOS package manager called HomeBrew (https://brew.sh/):
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 	brew install metis
+	- If Apple no longer ships default compilers with support for OpenMP (for multithreading), users may also install this with HomeBrew:
+	brew install libomp
 
 USING GIT:
 

@@ -6,6 +6,6 @@ if ~exist(dir_solver_obj)
 	mkdir(dir_solver_obj)
 end
 system(sprintf('make -C %s clean',dir_solver)) ;
-system(sprintf('make -C %s',dir_solver)) ;
+system(sprintf('make -j -C %s',dir_solver)) ;
 
 end

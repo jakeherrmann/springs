@@ -78,8 +78,6 @@ boundary{4} = setdiff( boundary{4} , [boundary{1};boundary{2}] ) ;
 % overall parameters
 num_dimensions = 2 ;            % number of spatial dimensions
 precision = 'double' ;          % floating point precision: 'single' or 'double'
-num_stiffness_tension = 1 ;     % number of polynomial stiffness coefficients for tension
-num_stiffness_compression = 0 ; % number of polynomial stiffness coefficients for compression
 
 % size of network
 num_points = size(loc,1) ;
@@ -134,11 +132,13 @@ options.tolerance_sum_net_force = 1e-24 ;
 %% ADD FORCES AND RESOLVE EQUILIBRIUM
 
 % use distance from the "top" in a gravitational field
-gravity_angle = -0.35*pi ;
+gravity_angle = -pi/2;%-0.35*pi ;
 gravity_direction = [ cos(gravity_angle) , sin(gravity_angle) ] ;
 height = nodes.position * gravity_direction' ;
-gravity_magnitude = 1.2 * ( max(height) - height ) / range(height) ;
+gravity_magnitude = 2 * ( max(height) - height ) / range(height) ;
 nodes_eq.force = bsxfun(@times, gravity_magnitude , gravity_direction ) ;
+
+springs.force_length_type_compression(:) = 1 ; % none=0, polynomial=1, exponential=2, powerlaw=3
 
 % run solver
 [ nodes_eq_force , ~ ] = springs_solve( nodes_eq , springs , options ) ;

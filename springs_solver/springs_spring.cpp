@@ -143,7 +143,11 @@ T Spring<T,N>::spring_energy( void )
 		force_magnitude *= force_sign ;
 	}
 	force = delta_position ;
-	force *= (force_magnitude/length) ;
+	if( length == 0.0 ) {
+		force *= 0.0 ; // avoids divide by zero errors and NAN results
+	} else {
+		force *= (force_magnitude/length) ;
+	}
 	return energy ;
 }
 template< class T , std::size_t N >

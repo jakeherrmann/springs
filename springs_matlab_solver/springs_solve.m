@@ -7,11 +7,21 @@ if numel(varargin) > 0
 		options.(ff{1}) = varargin{1}.(ff{1}) ;
 	end
 end
+use_parallel = 1 ;
+verbose = 1 ;
+dir_input  = 'springs_input' ;
+dir_output = 'springs_output' ;
 if numel(varargin) > 1
 	use_parallel = varargin{2} ;
 end
 if numel(varargin) > 2
 	verbose = varargin{3} ;
+end
+if numel(varargin) > 3
+	dir_input = varargin{4} ;
+end
+if numel(varargin) > 4
+	dir_output = varargin{5} ;
 end
 
 exe_springs_solver = fullfile('.','springs_solver','springs_solver.exe') ;
@@ -19,9 +29,6 @@ if ~exist( exe_springs_solver ,'file')
 	fprintf( 'ERROR: Compiled executable not found.  Attempting to compile.\n' )
 	springs_setup()
 end
-
-dir_input  = 'springs_input' ;
-dir_output = 'springs_output' ;
 
 fids = fopen('all') ;
 filenames = arrayfun( @fopen , fids ,'UniformOutput',false) ;
