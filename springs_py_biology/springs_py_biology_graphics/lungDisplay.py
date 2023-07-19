@@ -57,6 +57,11 @@ def display_2D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 	if ax_lims is not None:
 		ax.set_xlim(ax_lims[0][0], ax_lims[0][1])
 		ax.set_ylim(ax_lims[1][0], ax_lims[1][1])
+	else:
+		s_max = np.asarray( [ s.max(0) for s in segments ] ).max(0)
+		s_min = np.asarray( [ s.min(0) for s in segments ] ).min(0)
+		ax.set_xlim(s_min[0], s_max[0])
+		ax.set_ylim(s_min[1], s_max[1])
 	ax.add_collection( mplcol.LineCollection(segments, colors=colors) )
 
 	# alv_centroids = np.array([ np.mean( np.array( [ n.position for w in a.walls for n in w.structure.nodes ] ) ,axis=0) for a in lung.alveoli ])
@@ -193,11 +198,9 @@ def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 	else:
 		xyz_max = np.asarray( [ xyz.max(0) for xyz in xyz_segments ] ).max(0)
 		xyz_min = np.asarray( [ xyz.min(0) for xyz in xyz_segments ] ).min(0)
-		xyz_mid = 0.5 * ( xyz_max - xyz_min )
-		xyz_range = xyz_mid[0].max()
-		ax.set_xlim(xyz_mid[0]-xyz_range, xyz_mid[0]+xyz_range)
-		ax.set_ylim(xyz_mid[0]-xyz_range, xyz_mid[0]+xyz_range)
-		ax.set_zlim(xyz_mid[0]-xyz_range, xyz_mid[0]+xyz_range)
+		ax.set_xlim(xyz_min[0], xyz_max[0])
+		ax.set_ylim(xyz_min[1], xyz_max[1])
+		ax.set_zlim(xyz_min[2], xyz_max[2])
 	ax.set_xlabel('x')
 	ax.set_ylabel('y')
 	ax.set_zlabel('z')
