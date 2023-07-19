@@ -161,6 +161,11 @@ def display_3D_slice(lung, color_variable=None, color_range=None, ax_lims=None, 
 	if ax_lims is not None:
 		ax.set_xlim(ax_lims[0][0], ax_lims[0][1])
 		ax.set_ylim(ax_lims[1][0], ax_lims[1][1])
+	else:
+		xyz_max = np.asarray( [ xyz.max(0) for xyz in xyz_segments ] ).max(0)
+		xyz_min = np.asarray( [ xyz.min(0) for xyz in xyz_segments ] ).min(0)
+		ax.set_xlim(xyz_min[0], xyz_max[0])
+		ax.set_ylim(xyz_min[1], xyz_max[1])
 	ax.add_collection( mplcol.LineCollection(xyz_segments, colors=c) )
 	if save_file_name is not None:
 		plt.savefig(save_file_name, dpi=dpi)
