@@ -30,36 +30,42 @@ class Agent_Fibroblast(Agent):
 		SIGMAX = 10.0
 		EXPMIN = (2.0*SIGMIN)-SIGMAX
 		EXPMAX = 2.0*(SIGMAX-SIGMIN)
-		if degrade_behavior=='Constant':
-			degrade_variable = None;
-			degrade_coefs = [-1.0,+1.0,SIGMIN,SIGMIN]
+		if degrade_behavior is None:
+			self.degrade_variable = None
+			self.degrade_coefs = [-1.0,+1.0,0.0,0.0]
+		elif degrade_behavior=='Constant':
+			self.degrade_variable = None
+			self.degrade_coefs = [-1.0,+1.0,SIGMIN,SIGMIN]
 		else:
 			degrade_behavior = degrade_behavior.split('_')
-			if   degrade_behavior[0]=='StrainAverage'   : degrade_variable = 'strain'            ; SATVAL = 1.0 ;
-			elif degrade_behavior[0]=='StrainRate'      : degrade_variable = 'strain_rate'       ; SATVAL = 0.2 ;
-			elif degrade_behavior[0]=='StrainEnergyRate': degrade_variable = 'strain_energy_rate'; SATVAL = 0.1 ;
-			elif degrade_behavior[0]=='Stiffness'       : degrade_variable = 'stiffness'         ; SATVAL = 3.0 ;
-			if   degrade_behavior[1]=='ExponentialIncreasing': degrade_coefs = [-SATVAL,+SATVAL,EXPMIN,SIGMAX]
-			elif degrade_behavior[1]=='ExponentialDecreasing': degrade_coefs = [-SATVAL,+SATVAL,EXPMAX,SIGMIN]
-			elif degrade_behavior[1]=='SigmoidalIncreasing'  : degrade_coefs = [0.2*SATVAL,SATVAL,SIGMIN,SIGMAX]
-			elif degrade_behavior[1]=='SigmoidalDecreasing'  : degrade_coefs = [0.2*SATVAL,SATVAL,SIGMAX,SIGMIN]
+			if   degrade_behavior[0]=='StrainAverage'   : self.degrade_variable = 'strain'            ; SATVAL = 1.0 ;
+			elif degrade_behavior[0]=='StrainRate'      : self.degrade_variable = 'strain_rate'       ; SATVAL = 0.2 ;
+			elif degrade_behavior[0]=='StrainEnergyRate': self.degrade_variable = 'strain_energy_rate'; SATVAL = 0.1 ;
+			elif degrade_behavior[0]=='Stiffness'       : self.degrade_variable = 'stiffness'         ; SATVAL = 3.0 ;
+			if   degrade_behavior[1]=='ExponentialIncreasing': self.degrade_coefs = [-SATVAL,+SATVAL,EXPMIN,SIGMAX]
+			elif degrade_behavior[1]=='ExponentialDecreasing': self.degrade_coefs = [-SATVAL,+SATVAL,EXPMAX,SIGMIN]
+			elif degrade_behavior[1]=='SigmoidalIncreasing'  : self.degrade_coefs = [0.2*SATVAL,SATVAL,SIGMIN,SIGMAX]
+			elif degrade_behavior[1]=='SigmoidalDecreasing'  : self.degrade_coefs = [0.2*SATVAL,SATVAL,SIGMAX,SIGMIN]
 		SIGMIN =  1.0
 		SIGMAX = 10.0
 		EXPMIN = (2.0*SIGMIN)-SIGMAX
 		EXPMAX = 2.0*(SIGMAX-SIGMIN)
-		if repair_behavior=='Constant':
-			repair_variable = None;
-			repair_coefs = [-1.0,+1.0,SIGMIN,SIGMIN]
+		if repair_behavior is None:
+			self.repair_variable = None
+			self.repair_coefs = [-1.0,+1.0,0.0,0.0]
+		elif repair_behavior=='Constant':
+			self.repair_variable = None
+			self.repair_coefs = [-1.0,+1.0,SIGMIN,SIGMIN]
 		else:
 			repair_behavior = repair_behavior.split('_')
-			if   repair_behavior[0]=='StrainAverage'   : repair_variable = 'strain'            ; SATVAL = 1.0 ;
-			elif repair_behavior[0]=='StrainRate'      : repair_variable = 'strain_rate'       ; SATVAL = 0.2 ;
-			elif repair_behavior[0]=='StrainEnergyRate': repair_variable = 'strain_energy_rate'; SATVAL = 0.1 ;
-			elif repair_behavior[0]=='Stiffness'       : repair_variable = 'stiffness'         ; SATVAL = 3.0 ;
-			if   repair_behavior[1]=='ExponentialIncreasing': repair_coefs = [-SATVAL,+SATVAL,EXPMIN,SIGMAX]
-			elif repair_behavior[1]=='ExponentialDecreasing': repair_coefs = [-SATVAL,+SATVAL,EXPMAX,SIGMIN]
-			elif repair_behavior[1]=='SigmoidalIncreasing'  : repair_coefs = [0.2*SATVAL,SATVAL,SIGMIN,SIGMAX]
-			elif repair_behavior[1]=='SigmoidalDecreasing'  : repair_coefs = [0.2*SATVAL,SATVAL,SIGMAX,SIGMIN]
+			if   repair_behavior[0]=='StrainAverage'   : self.repair_variable = 'strain'            ; SATVAL = 1.0 ;
+			elif repair_behavior[0]=='StrainRate'      : self.repair_variable = 'strain_rate'       ; SATVAL = 0.2 ;
+			elif repair_behavior[0]=='StrainEnergyRate': self.repair_variable = 'strain_energy_rate'; SATVAL = 0.1 ;
+			elif repair_behavior[0]=='Stiffness'       : self.repair_variable = 'stiffness'         ; SATVAL = 3.0 ;
+			if   repair_behavior[1]=='ExponentialIncreasing': self.repair_coefs = [-SATVAL,+SATVAL,EXPMIN,SIGMAX]
+			elif repair_behavior[1]=='ExponentialDecreasing': self.repair_coefs = [-SATVAL,+SATVAL,EXPMAX,SIGMIN]
+			elif repair_behavior[1]=='SigmoidalIncreasing'  : self.repair_coefs = [0.2*SATVAL,SATVAL,SIGMIN,SIGMAX]
+			elif repair_behavior[1]=='SigmoidalDecreasing'  : self.repair_coefs = [0.2*SATVAL,SATVAL,SIGMAX,SIGMIN]
 
 	@staticmethod
 	def sigmoid(coefs, arg):
@@ -93,7 +99,7 @@ class Agent_Fibroblast(Agent):
 		degrade_rate *= self.degrade_rate_multiplier
 		return degrade_rate
 
-	def maintain(self, time_step):
+	def maintain(self, time_step, rate_multiplier=1.0):
 		#TODO better to make strain and strain energy rate properties of wall that can be sensed
 		for spring in self.wall.structure.springs:
 			if not spring.broken:
@@ -107,6 +113,7 @@ class Agent_Fibroblast(Agent):
 					D = self.degrade()
 					R = self.repair()
 					delta_K = R - D*math.sqrt(K)
+					delta_K *= rate_multiplier
 					delta_K = delta_K if delta_K > -K else -K
 					# self.strain_prev = strain
 					ratio_K = 1.0 + delta_K/K
