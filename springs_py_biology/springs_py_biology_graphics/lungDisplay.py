@@ -191,8 +191,8 @@ def display_3D(lung, color_variable=None, color_range=None, ax_lims=None, delay=
 	plt.ioff()
 	if not plt.get_fignums():
 		plt.gcf().set_size_inches(10.0, 6.0)
-	ax = plt.gca()
-	plt.cla()
+	# ax = plt.gca()
+	# plt.cla()
 	ax = plt.axes(
 		projection='3d',
 		proj_type='ortho')
