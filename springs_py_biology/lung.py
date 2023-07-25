@@ -40,9 +40,9 @@ class Lung:
 		if self.spring_break_variable is not None and self.spring_break_threshold is not None:
 			self.net.break_spring(self.spring_break_variable, self.spring_break_threshold)
 
-	def agent_actions(self, time_step):
+	def agent_actions(self, time_step, rate_multiplier=1.0):
 		for agent in self.agents:
-			agent.do_actions(time_step)
+			agent.do_actions(time_step, rate_multiplier)
 
 	def add_fibroblast_every_wall(self):
 		for wall in self.walls:
