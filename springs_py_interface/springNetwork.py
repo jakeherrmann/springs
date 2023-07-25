@@ -92,7 +92,8 @@ class SpringNetwork:
 		sys_command = str(exe_springs_solver) + ' ' + str(dir_input) + ' ' + str(dir_output)
 		sys_command += ' --verbose ' + str(self.solver_verbose)
 		sys_command += ' --parallel ' + str(self.solver_parallel)
-		print(sys_command)
+		if self.solver_verbose:
+			print(sys_command)
 		os.environ['OMP_STACKSIZE'  ] = '64M'    ;
 		os.environ['OMP_PLACES'     ] = 'cores'  ;
 		os.environ['OMP_WAIT_POLICY'] = 'active' ;
