@@ -125,11 +125,11 @@ class Spring:
 			if self.force_length_type_tension == 0: #none
 				pass
 			elif self.force_length_type_tension == 1: #polynomial
-				self.force_length_parameters = [ k*multiplier for k in self.force_length_parameters_tension ]
+				self.force_length_parameters_tension = [ k*multiplier for k in self.force_length_parameters_tension ]
 			elif self.force_length_type_tension == 2: #exponential
-				self.force_length_parameters = [ k*multiplier if i%2==0 else k for i, k in enumerate(self.force_length_parameters_tension) ]
+				self.force_length_parameters_tension = [ k*multiplier if i%2==0 else k for i, k in enumerate(self.force_length_parameters_tension) ]
 			elif self.force_length_type_tension == 3: #powerlaw
-				self.force_length_parameters = [ k*multiplier if i%2==0 else k for i, k in enumerate(self.force_length_parameters_tension) ]
+				self.force_length_parameters_tension = [ k*multiplier if i%2==0 else k for i, k in enumerate(self.force_length_parameters_tension) ]
 		if modify_compression:
 			if self.force_length_type_compression == 0: #none
 				pass
