@@ -39,7 +39,9 @@ void SpringNetwork<T,N>::get_scale_network( void )
 		scale_length += s->length ;
 	}
 	scale_stiffness /= static_cast<T>(springs.size()) ;
-	scale_length /= static_cast<T>(springs.size()) ;
+	scale_length    /= static_cast<T>(springs.size()) ;
+	scale_stiffness = ( scale_stiffness > 0.0 ) ? scale_stiffness : static_cast<T>(1.0) ;
+	scale_length    = ( scale_length    > 0.0 ) ? scale_length    : static_cast<T>(1.0) ;
 	scale_force = scale_length * scale_stiffness ;
 	return ;
 }
