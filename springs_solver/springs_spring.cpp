@@ -462,7 +462,7 @@ void Spring<T,N>::spring_rescale( const T & scale_length , const T & scale_stiff
 	switch( force_length_type_tension ) {
 		case Spring<T,N>::ForceLengthRelationship::polynomial :
 			for( std::size_t i = 0 ; i < force_length_parameters_tension.size() ; ++i ) {
-				force_length_parameters_tension[i] *= scale_stiffness*std::pow(scale_length,static_cast<T>(1)-static_cast<T>(i)) ; ;
+				force_length_parameters_tension[i] *= scale_stiffness*std::pow(scale_length,static_cast<T>(1)-static_cast<T>(i+1)) ; ;
 			}
 			break ;
 		case Spring<T,N>::ForceLengthRelationship::exponential :
@@ -482,7 +482,7 @@ void Spring<T,N>::spring_rescale( const T & scale_length , const T & scale_stiff
 	switch( force_length_type_compression ) {
 		case Spring<T,N>::ForceLengthRelationship::polynomial :
 			for( std::size_t i = 0 ; i < force_length_parameters_compression.size() ; ++i ) {
-				force_length_parameters_compression[i] *= scale_stiffness*std::pow(scale_length,static_cast<T>(1)-static_cast<T>(i)) ; ;
+				force_length_parameters_compression[i] *= scale_stiffness*std::pow(scale_length,static_cast<T>(1)-static_cast<T>(i+1)) ; ;
 			}
 			break ;
 		case Spring<T,N>::ForceLengthRelationship::exponential :
