@@ -45,7 +45,7 @@ setenv( 'OMP_PLACES'      , 'cores'  ) ;
 setenv( 'OMP_WAIT_POLICY' , 'active' ) ;
 setenv( 'OMP_PROC_BIND'   , 'true'   ) ;
 sys_command = sprintf( '%s %s %s --verbose %d --parallel %d' , exe_springs_solver , dir_input , dir_output , options.verbose , options.use_parallel ) ;
-if verbose
+if options.verbose
 	sys_failure = system( sys_command ) ;
 else
 	[ sys_failure , ~ ] = system( sys_command ) ;
@@ -60,7 +60,7 @@ if sys_failure
 		fprintf(fid,'set path=%%path:%s;=%%\n',ml_path) ;
 		fprintf(fid,'%s\n',sys_command) ;
 		fclose( fid ) ;
-		if verbose
+		if options.verbose
 			system( batfile ) ;
 		else
 			[ ~ , ~ ] = system( batfile ) ;
