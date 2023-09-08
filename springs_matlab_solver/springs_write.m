@@ -26,7 +26,6 @@ numeric_args = {
 	'use_numerical_hessian'
 	'tolerance_change_objective'
 	'tolerance_sum_net_force'
-	'use_parallel'
 	} ;
 
 filename = fullfile( dir_input , 'network_parameters.txt' ) ;
