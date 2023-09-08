@@ -8,7 +8,7 @@ class Agent:
 			self.wall.agents.append( self )
 		self.actions = None
 
-	def do_actions(self, time_step):
+	def do_actions(self, time_step, rate_multiplier=1.0):
 		if self.actions is not None:
 			for action in self.actions:
-				action(time_step)
+				action(time_step, rate_multiplier)

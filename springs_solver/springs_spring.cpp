@@ -443,6 +443,37 @@ T Spring<T,N>::spring_get_scale_stiffness( void )
 			}
 		}
 	}
+	if( spring_scale_stiffness < std::numeric_limits<T>::epsilon() ) {
+		if( length < rest_length ) { //SWAPPED FROM FIRST PASS
+			switch( force_length_type_tension ) {
+				case Spring<T,N>::ForceLengthRelationship::polynomial :
+					spring_scale_stiffness = force_length_parameters_tension[0] ;
+					break ;
+				case Spring<T,N>::ForceLengthRelationship::exponential :
+					spring_scale_stiffness = force_length_parameters_tension[0] ;
+					break ;
+				case Spring<T,N>::ForceLengthRelationship::powerlaw :
+					spring_scale_stiffness = force_length_parameters_tension[0] ;
+					break ;
+				default:
+					break ;
+			}
+		} else {
+			switch( force_length_type_compression ) {
+				case Spring<T,N>::ForceLengthRelationship::polynomial :
+					spring_scale_stiffness = force_length_parameters_compression[0] ;
+					break ;
+				case Spring<T,N>::ForceLengthRelationship::exponential :
+					spring_scale_stiffness = force_length_parameters_compression[0] ;
+					break ;
+				case Spring<T,N>::ForceLengthRelationship::powerlaw :
+					spring_scale_stiffness = force_length_parameters_compression[0] ;
+					break ;
+				default:
+					break ;
+			}
+		}
+	}
 	return spring_scale_stiffness ;
 }
 
