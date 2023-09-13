@@ -27,14 +27,20 @@ numeric_args = {
 	'tolerance_change_objective'
 	'tolerance_sum_net_force'
 	} ;
+exclude_args = {
+	'verbose'
+	'use_parallel'
+	} ;
 
 filename = fullfile( dir_input , 'network_parameters.txt' ) ;
 fid = fopen( filename ,'wt') ;
 for ff = fieldnames(network_param)'
-	if ismember( ff{1} , numeric_args )
-		fprintf( fid , '%s %s\n' , ff{1} , num2str( network_param.(ff{1}) ) ) ;
-	else
-		fprintf( fid , '%s %s\n' , ff{1} , network_param.(ff{1}) ) ;
+	if ~ismember( ff{1} , exclude_args )
+		if ismember( ff{1} , numeric_args )
+			fprintf( fid , '%s %s\n' , ff{1} , num2str( network_param.(ff{1}) ) ) ;
+		else
+			fprintf( fid , '%s %s\n' , ff{1} , network_param.(ff{1}) ) ;
+		end
 	end
 end
 fclose( fid ) ;
