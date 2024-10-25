@@ -22,6 +22,13 @@ class SpringNetwork:
 		'==': operator.eq ,
 		'!=': operator.ne }
 
+	filename_parameters       = 'network_parameters.txt'
+	filename_nodes            = 'network_nodes.dat'
+	filename_springs          = 'network_springs.dat'
+	filename_structures       = 'network_structures.dat'
+	filename_structure_groups = 'network_structure_groups.dat'
+	filename_boundaries       = 'network_boundaries.dat'
+
 	def __init__(self, num_dimensions=2, precision='float'):
 		self.num_nodes = 0
 		self.num_springs = 0
@@ -72,6 +79,20 @@ class SpringNetwork:
 			self.num_boundaries = len(boundaries)
 			self.connect_boundaries_nodes()
 
+	def clean_dir(dir_name):
+		if not dir_name.exists():
+			dir_name.mkdir(parents=True)
+		else:
+			check_files = [
+				SpringNetwork.filename_parameters ,
+				SpringNetwork.filename_nodes ,
+				SpringNetwork.filename_springs ,
+				SpringNetwork.filename_structures ,
+				SpringNetwork.filename_structure_groups ,
+				SpringNetwork.filename_boundaries ]
+			for check_file in check_files:
+				(dir_name/check_file).unlink(missing_ok=True)
+
 	def solve(self):
 		self.write_spring_network(self.dir_solver_input, use_solver_format=True)
 		self.run_spring_solver(self.dir_solver_input, self.dir_solver_output)
@@ -82,8 +103,7 @@ class SpringNetwork:
 			dir_input = self.dir_solver_input
 		if dir_output is None:
 			dir_output = self.dir_solver_output
-		if not dir_output.exists():
-			dir_output.mkdir(parents=True)
+		SpringNetwork.clean_dir(dir_output)
 		exe_springs_solver = Path('.') / 'springs_solver' / 'springs_solver.exe'
 		if not exe_springs_solver.exists():
 			print('Could not find compiled solver executable.')
@@ -103,11 +123,10 @@ class SpringNetwork:
 	def write_spring_network(self, dir_input=None, use_solver_format=False):
 		if dir_input is None:
 			dir_input = self.dir_solver_input
-		if not dir_input.exists():
-			dir_input.mkdir(parents=True)
+		SpringNetwork.clean_dir(dir_input)
 		write_nodes = self.nodes
 		write_springs = self.springs if not use_solver_format else [ spring for spring in self.springs if not spring.broken ]
-		file_name = dir_input / 'network_parameters.txt'
+		file_name = dir_input / SpringNetwork.filename_parameters
 		with open(file_name,'wt') as file:
 			file.write(                 'num_points {:d}\n'.format(len(write_nodes)))
 			file.write(                'num_springs {:d}\n'.format(len(write_springs)))
@@ -122,25 +141,25 @@ class SpringNetwork:
 			file.write(      'use_numerical_hessian {:d}\n'.format(self.solver_use_numerical_hessian))
 			file.write( 'tolerance_change_objective {:e}\n'.format(self.solver_tolerance_change_objective))
 			file.write(    'tolerance_sum_net_force {:e}\n'.format(self.solver_tolerance_sum_net_force))
-		file_name = dir_input / 'network_nodes.dat'
+		file_name = dir_input / SpringNetwork.filename_nodes
 		file_format = Node.get_file_format(
 			self.num_dimensions,
 			self.precision,
 			use_solver_format=use_solver_format)
 		file_format.write_binary_file(file_name, write_nodes)
-		file_name = dir_input / 'network_springs.dat'
+		file_name = dir_input / SpringNetwork.filename_springs
 		file_format = Spring.get_file_format(
 			self.precision,
 			use_solver_format=use_solver_format)
 		file_format.write_binary_file(file_name, write_springs)
 		if not use_solver_format:
-			file_name = dir_input / 'network_structures.dat'
+			file_name = dir_input / SpringNetwork.filename_structures
 			file_format = Structure.get_file_format()
 			file_format.write_binary_file(file_name, self.structures)
-			file_name = dir_input / 'network_structure_groups.dat'
+			file_name = dir_input / SpringNetwork.filename_structure_groups
 			file_format = StructureGroup.get_file_format()
 			file_format.write_binary_file(file_name, self.structure_groups)
-			file_name = dir_input / 'network_boundaries.dat'
+			file_name = dir_input / SpringNetwork.filename_boundaries
 			file_format = Boundary.get_file_format(
 				self.num_dimensions)
 			file_format.write_binary_file(file_name, self.boundaries)
@@ -149,7 +168,7 @@ class SpringNetwork:
 		if dir_output is None:
 			dir_output = self.dir_solver_output
 		if reinitialize:
-			file_name = dir_output / 'network_parameters.txt'
+			file_name = dir_output / SpringNetwork.filename_parameters
 			with open(file_name,'rt') as file:
 				for line in file.readlines():
 					arg = line.rstrip('\n').split()
@@ -172,25 +191,25 @@ class SpringNetwork:
 				self.boundaries = [ Boundary() for count in range(self.num_boundaries) ]
 		read_nodes = self.nodes
 		read_springs = self.springs if not use_solver_format else [ spring for spring in self.springs if not spring.broken ]
-		file_name = dir_output / 'network_nodes.dat'
+		file_name = dir_output / SpringNetwork.filename_nodes
 		file_format = Node.get_file_format(
 			self.num_dimensions,
 			self.precision,
 			use_solver_format=use_solver_format)
 		file_format.read_binary_file(file_name, read_nodes)
-		file_name = dir_output / 'network_springs.dat'
+		file_name = dir_output / SpringNetwork.filename_springs
 		file_format = Spring.get_file_format(
 			self.precision,
 			use_solver_format=use_solver_format)
 		file_format.read_binary_file(file_name, read_springs)
 		if not use_solver_format:
-			file_name = dir_output / 'network_structures.dat'
+			file_name = dir_output / SpringNetwork.filename_structures
 			file_format = Structure.get_file_format()
 			file_format.read_binary_file(file_name, self.structures)
-			file_name = dir_output / 'network_structure_groups.dat'
+			file_name = dir_output / SpringNetwork.filename_structure_groups
 			file_format = StructureGroup.get_file_format()
 			file_format.read_binary_file(file_name, self.structure_groups)
-			file_name = dir_output / 'network_boundaries.dat'
+			file_name = dir_output / SpringNetwork.filename_boundaries
 			file_format = Boundary.get_file_format(
 				self.num_dimensions)
 			file_format.read_binary_file(file_name, self.boundaries)

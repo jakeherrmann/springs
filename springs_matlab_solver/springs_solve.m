@@ -22,6 +22,11 @@ if ~exist( exe_springs_solver ,'file')
 	springs_setup()
 end
 
+check_files = {
+	'network_parameters.txt'
+	'network_nodes.dat'
+	'network_springs.dat'
+	} ;
 fids = fopen('all') ;
 filenames = arrayfun( @fopen , fids ,'UniformOutput',false) ;
 fids = fids( contains(filenames,{dir_input,dir_output}) ) ;
@@ -31,12 +36,14 @@ end
 if ~exist( dir_input ,'dir')
 	mkdir( dir_input )
 else
-	delete(fullfile(dir_input,'*'))
+	rm_files = fullfile(dir_input,check_files) ;
+	delete( rm_files{:} )
 end
 if ~exist( dir_output ,'dir')
 	mkdir( dir_output )
 else
-	delete(fullfile(dir_output,'*')) ;
+	rm_files = fullfile(dir_output,check_files) ;
+	delete( rm_files{:} )
 end
 
 springs_write( dir_input , nodes , springs , options ) ;
