@@ -11,7 +11,10 @@ SETUP:
 The Python and Matlab commands to setup the solver executable (springs_setup.py and springs_setup.m, respectively) expect the GNU make and g++ commands to be accessible from the command prompt on your operating system.  You'll also need to install METIS, a library for graph partitioning that is necessary for this program to perform multithreaded execution.
 
 - Windows OS:
-	We recommend MSYS and MinGW (https://www.msys2.org/).  Follow the guides to installation and getting started from their website.  Be sure to add the msys64\usr\bin and msys64\mingw64\bin folders to your PATH environment variable (https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).  Also, make sure to install METIS through the package manager (https://packages.msys2.org/base/mingw-w64-metis) using the command "pacman -Ss metis" to find the available package and "pacman -S <packagename>" to install it.
+	We recommend MSYS and MinGW (https://www.msys2.org/).  Follow the guides to installation and getting started from their website. Be sure to add the msys64\usr\bin and msys64\mingw64\bin folders to your PATH environment variable (https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).  Also, make sure to install METIS through the package manager (https://packages.msys2.org/base/mingw-w64-metis) using the command "pacman -Ss metis" to find the available package and "pacman -S <packagename>" to install it.  For example:
+	- mingw-w64-x86_64-toolchain
+	- mingw-w64-x86_64-metis
+	- mingw-w64-x86_64-parmetis
 
 - Mac OS:
 	- Compiler: Users may install XCode or just the command line developer tools (http://www.edparrish.net/common/macgpp.php).
